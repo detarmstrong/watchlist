@@ -6,6 +6,7 @@
             [seesaw.border :refer [empty-border]]
             [seesaw.keymap :refer :all]
             [seesaw.mig :refer :all]
+            [seesaw.swingx :refer [hyperlink]]
             [clj-http.util :refer [url-encode]]
             [overtone.at-at :as at-at])
   (:use seesaw.core
@@ -19,7 +20,7 @@
        ;         :center "You have 5 new updates")
        :center (scrollable
                  (vertical-panel
-                   :border (empty-border)
+                   :border (empty-border :thickness 0)
                    :id :updates-panel
                    :items [])
                  :border 0
@@ -33,23 +34,23 @@
 
 (defn mig []
   (mig-panel 
+    :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["", "[][grow][]", "[top]"]
+    :constraints ["ins 10", "[][grow][]", "[top]"]
     :items [
       ["<html><b>#8400 Add tertiary insurance</b></html>" "span 2"]
-      ["<html><a href='#'>#13</a></html>" "wrap"]
+      ; Hack to get the text to set. :text on hyperlink did not work
+      [(config! (hyperlink :uri "http://google.com") :text "#13") "wrap"]
       ["Danny, 30m"]
-      [
-         (text :text "Update is really long update that goes and goes and goes and goes and goes and goes \nnew line\nnew line\nnewline"
-               :multi-line? true
-                       :editable? false
-                       :wrap-lines? true
-                       :background (color "lightgray")
-                       :margin 5
-                       )
-         
+      [(text :text "Update is really long update that goes and goes and goes and goes and goes and goes \nnew line\nnew line\nnewline"
+             :multi-line? true
+             :editable? false
+             :wrap-lines? true
+             :background (color "lightgray")
+             :margin 5)
        "span 2 2, gap 8, growx, wrap"]
-      ["(urgent)"]]))
+      ["(urgent)" "wrap"]
+      ["You're the assignee" "span 2"]]))
                
 (def watchlist-frame
   (frame
