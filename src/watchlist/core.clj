@@ -29,6 +29,7 @@
                             :items [])
                           :border 0)]
                   (-> s (.getVerticalScrollBar) (.setUnitIncrement 8))
+                  (-> s (.getHorizontalScrollBar) (.setUnitIncrement 6))
                   s)
        :south (border-panel 
                 :border [(empty-border :thickness 6)]
