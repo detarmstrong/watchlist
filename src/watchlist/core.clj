@@ -22,13 +22,14 @@
        ;:north (border-panel
        ;         :border [(seesaw.border/empty-border :thickness 6)]
        ;         :center "You have 5 new updates")
-       :center (scrollable
-                 (vertical-panel
-                   :border (empty-border :thickness 0)
-                   :id :updates-panel
-                   :items [])
-                 :border 0
-                 )
+       :center (let [s (scrollable
+                          (vertical-panel
+                            :border (empty-border :thickness 0)
+                            :id :updates-panel
+                            :items [])
+                          :border 0)]
+                  (-> s (.getVerticalScrollBar) (.setUnitIncrement 8))
+                  s)
        :south (border-panel 
                 :border [(empty-border :thickness 6)]
                 :west "Feed fresh as of 3 minutes ago"
@@ -173,11 +174,10 @@
 ;  (config! watchlist-frame :content (frame-content))
 ;  (doseq [item (select watchlist-frame [:#updates-panel :> :*])]
 ;    (remove! (select watchlist-frame [:#updates-panel]) item))
-;  (repeatedly
-;    20
-;    #(add!
-;       (select watchlist-frame [:#updates-panel])
-;       (build-update-row {:name "xx"})))
+;  (doseq [record (watchlist.core/get-issue-updates "2014-08-21")]
+;      (add! 
+;        (select watchlist-frame [:#updates-panel])
+;        (build-update-row record)))
 ;  (-> watchlist-frame pack! show!))
 ;
 ;(show-frame)
