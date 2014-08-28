@@ -8,7 +8,8 @@
                  [cheshire "5.3.1"]
                  [clj-http "0.9.1"]
                  [org.clojure/core.memoize "0.5.6"]
-                 [overtone/at-at "1.2.0"]]
+                 [overtone/at-at "1.2.0"]
+                 [clj-time "0.8.0"]]
   :profiles {:dev {:dependencies [[midje "1.5.0"]]}}
   :main watchlist.core
   :jvm-opts ["-Xmx128m"])

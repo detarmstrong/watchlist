@@ -38,3 +38,26 @@
                                    :conn-timeout 8000
                                    :throw-exceptions false})]
     (= 200 (:status response))))
+
+(defn get-updated-issues [since-ts]
+  "Return issues updated since-ts"
+  (let [response (client/get
+                   "http://redmine.visiontree.com/issues.json"
+                   {:as :json
+                    :basic-auth [api-token ""]
+                    :query-params {:status_id "*"
+                                   :updated_on (str ">=" since-ts)
+                                   :sort "updated_on:desc"
+                                   :limit 20}})]
+    (get-in response [:body :issues])))
+
+(defn issue [id]
+  (get-in
+    (client/get 
+      (format "http://redmine.visiontree.com/issues/%d.json" 
+        (#(Integer/parseInt %) (trim id))) 
+      {:as :json
+       :basic-auth [api-token ""]
+       :query-params {:include "children,journals,watchers,relations"}})
+    [:body :issue]))
+  
