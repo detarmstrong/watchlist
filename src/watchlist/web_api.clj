@@ -2,6 +2,7 @@
   "Wrap the api calls - no guarding of params here"
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
+  (:require [clojure.core.memoize :refer [memo]])
   (:use [cheshire.core :only (generate-string)])
   (:use [clojure.string :only (trim)]))
 
@@ -48,10 +49,11 @@
                     :query-params {:status_id "*"
                                    :updated_on (str ">=" since-ts)
                                    :sort "updated_on:desc"
-                                   :limit 20}})]
+                                   :limit 10}})]
     (get-in response [:body :issues])))
 
 (defn issue [id]
+  "Get detailed info of issue"
   (get-in
     (client/get 
       (format "http://redmine.visiontree.com/issues/%d.json" 
@@ -60,4 +62,26 @@
        :basic-auth [api-token ""]
        :query-params {:include "children,journals,watchers,relations"}})
     [:body :issue]))
-  
+
+(defn issue-statuses []
+  "Get all issue statuses from redmine"
+  (reduce
+    (fn [accum value]
+       (assoc accum (:id value) (:name value)))
+    {}
+    (get-in
+      (clj-http.client/get 
+        "http://redmine.visiontree.com/issue_statuses.json"
+        {:as :json
+         :basic-auth [api-token ""]})
+      [:body :issue_statuses])))
+
+(def memoized-issue-statuses (memo issue-statuses))
+
+(defn get-issue-status-name-by-id [id]
+  (let [iid (if (integer? id)
+              id
+              (Integer/parseInt id))
+        statuses (memoized-issue-statuses)]
+    (get-in statuses [iid])))
+    

@@ -3,7 +3,7 @@
   (:require [watchlist.web-api :as api]
             [clojure.java.io :as io]
             [clojure.core :refer :all]
-            [clojure.string :refer [join split-lines]]
+            [clojure.string :refer [join split-lines trim]]
             [seesaw.core :refer :all]
             [seesaw.color :refer :all]
             [seesaw.border :refer [empty-border]]
@@ -57,13 +57,13 @@
       (>= delta-years 1) (str delta-years "y")
       (>= delta-days 30) (str (/ delta-days 30) "mon")
       (>= delta-days 1) (str delta-days "d")
-      (>= delta-hours) 1) (str delta-hours "h")
+      (>= delta-hours 1) (str delta-hours "h")
       (>= delta-minutes 1) (str delta-minutes "m")
-      :else (str delta-seconds "s")))
+      :else (str delta-seconds "s"))))
 
-(defrecord NoteUpdate [author subject update-text update-uri update-uri-label updated-at])
-(defrecord StatusUpdate [author subject old-status new-status update-uri update-uri-label updated-at])
-(defrecord NoteAndStatusUpdate [author subject update-text old-status new-status update-uri update-uri-label updated-at])
+(defrecord NoteUpdate [id author subject update-text update-uri update-uri-label updated-at])
+(defrecord StatusUpdate [id author subject old-status new-status new-status-label update-uri update-uri-label updated-at])
+(defrecord NoteAndStatusUpdate [id author subject update-text old-status new-status update-uri update-uri-label updated-at])
 
 (defn determine-update [issue]
   "Given an issue update determine if it's a NoteUpdate
@@ -74,20 +74,22 @@
         update-rank (count (-> issue :journals))
         update-uri (str "http://redmine.visiontree.com/issues/"
                          issue-id
-                         "#"
+                         "#note-"
                          update-rank)
         update-uri-label (str "#" update-rank)
-        updated-at (time-format/parse (-> issue :updated_on))]
+        updated-at (-> issue :updated_on)]
     (cond
       ; first check if NoteAndStatus
       (and
-        (-> issue :journals (last) :notes)
+        (not (empty? (-> issue :journals (last) :notes)))
         (= "status_id" (-> issue :journals (last) :details (last) :name)))
       (let [last-journal-entry (-> issue :journals (last))
             update-text (-> last-journal-entry :notes)
+            update-author (-> last-journal-entry :user :name)
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
-        (NoteAndStatusUpdate. author
+        (NoteAndStatusUpdate. issue-id
+                              update-author
                               subject
                               update-text
                               old-status
@@ -98,32 +100,42 @@
       ; second, check if StatusUpdate
       (and
         (= "status_id" (-> issue :journals (last) :details (last) :name))
-        (not (-> issue :journals (last) :notes)))
+        (empty? (-> issue :journals (last) :notes)))
       (let [last-journal-entry (-> issue :journals (last))
+            update-author (-> last-journal-entry :user :name)
             old-status (-> last-journal-entry :details (last) :old_value)
-            new-status (-> last-journal-entry :details (last) :new_value)]
-        (StatusUpdate. author
+            new-status (-> last-journal-entry :details (last) :new_value)
+            new-status-label (api/get-issue-status-name-by-id new-status)]
+        (StatusUpdate. issue-id
+                       update-author
                        subject
                        old-status
                        new-status
+                       new-status-label
                        update-uri
                        update-uri-label
                        updated-at))
       ; third, check if NoteUpdate
       (and
         ; if :notes field but not status_id
-        (-> issue :journals (last) :notes)
+        (not (empty? (-> issue :journals (last) :notes)))
         (not= "status_id" (-> issue :journals (last) :details (last) :name)))
       (let [last-journal-entry (-> issue :journals (last))
             update-text (-> last-journal-entry :notes)
+            update-author (-> last-journal-entry :user :name)
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
-        (NoteUpdate. author
+        (NoteUpdate. issue-id
+                     update-author
                      subject
                      update-text
                      update-uri
                      update-uri-label
-                     updated-at)))))
+                     updated-at))
+      ; check here for brand new instance - no :journals
+      ; suggests making new type of update like NewIssueUpdate?
+      ;or just filter out the nils?
+      )))
 
 (defn build-update-row [data]
   (mig-panel 
@@ -131,7 +143,10 @@
     :background (color "white")
     :constraints ["ins 10", "[][grow][]", "[top]"]
     :items [
-      [(label :text (:subject data)
+      [(label :text (str "#"
+                         (:id data)
+                         " "
+                         (:subject data))
               :font "ARIAL-BOLD-14")
        "span 2"]
       ; Hack to get the text to set. :text on hyperlink did not work
@@ -140,30 +155,39 @@
                   :tip "Open in browser")
                 :text (:update-uri-label data))
        "wrap"]
-      [(label :text (str (:author data)
+      [(label :text (str (first (clojure.string/split (:author data) #"\s"))
                          ", "
-                         (format-time-ago (:updated-at data)))
+                         (format-time-ago (time-format/parse (:updated-at data))))
               :tip (str "Updated at "
                         (time-format/unparse 
                           (time-format/formatter-local
                             "MM/dd/yyyy hh:mm:ssa")
                           (time-local/to-local-date-time
                             (:updated-at data)))))]
-      [(text :text (if (or (instance? NoteUpdate data)
-                           (instance? NoteAndStatusUpdate data))
+      [(text :text (cond
+                     (or (instance? NoteUpdate data)
+                         (instance? NoteAndStatusUpdate data))
                      (:update-text data)
-                     "Not a note update.")
-             :multi-line? true
-             :editable? false
-             :wrap-lines? true
-             :background (color "lightgray")
-             :margin 5)
-       "span 2 2, gap 8, growx, wrap"]]))
+                     (instance? StatusUpdate data)
+                     (str "Status set to: "
+                          (:new-status-label data)))
+        :multi-line? true
+        :editable? false
+        :wrap-lines? true
+        :background (color "lightgray")
+        :margin 5)
+      "span 2 2, gap 8, growx, wrap"]]))
 
 (defn get-issue-updates [from-ts]
   "Iterate issue updates and convert to simple map to 
    hand to View func"
-  (map #(determine-update (api/issue (get-in % [:id]))) (api/get-updated-issues from-ts)))
+  (filter
+    #(not (nil? %))
+    (map
+      #(determine-update
+         (api/issue
+           (get-in % [:id])))
+      (api/get-updated-issues from-ts))))
 
 (def watchlist-frame
   (frame
@@ -171,14 +195,16 @@
     :on-close :exit
     :content (frame-content)))
 
-;(defn show-frame []
-;  (config! watchlist-frame :content (frame-content))
-;  (doseq [item (select watchlist-frame [:#updates-panel :> :*])]
-;    (remove! (select watchlist-frame [:#updates-panel]) item))
-;  (doseq [record (watchlist.core/get-issue-updates "2014-08-21")]
-;      (add! 
-;        (select watchlist-frame [:#updates-panel])
-;        (build-update-row record)))
-;  (-> watchlist-frame pack! show!))
+(defn show-frame []
+  (api/load-token)
+  (-> watchlist-frame pack! show!)
+  (config! watchlist-frame :content (frame-content))
+  (doseq [item (select watchlist-frame [:#updates-panel :> :*])]
+    (remove! (select watchlist-frame [:#updates-panel]) item))
+  (doseq [record (watchlist.core/get-issue-updates "2014-08-21")]
+      (add! 
+        (select watchlist-frame [:#updates-panel])
+        (build-update-row record))))
+
 ;
 ;(show-frame)

@@ -98,6 +98,8 @@
      [{:id 36815,
        :user {:id 63, :name "Kyle Whalen"},
        :created_on "2014-08-21T21:48:35Z",
+   ; note that notes is empty if it's just a status update
+       :notes ""
        :details
        [{:property "attr",
          :name "status_id",
@@ -118,39 +120,44 @@
    :project {:id 1, :name "VTOC "}})
 
 (facts "about determine-update-type"
-  (fact "it determines an update is just a note"
-    (determine-update note-update-issue-ex)
-    =>
-    (just (->NoteUpdate "Danny Armstrong"
-                        "Sites should be able to manage their contact information"
-                        "Login card updated successfully. "
-                        "http://redmine.visiontree.com/issues/8475#2"
-                        "#2"
-                        "2014-08-21T21:48:35Z")))
-       
-  (fact "it determines an update is just a status change"
-    (determine-update status-update-issue-ex)
-    =>
-    (just (->StatusUpdate "Danny Armstrong"
+  (let [updated-at (time-format/parse "2014-08-21T21:48:35Z")]
+    (fact "it determines an update is just a note"
+      (determine-update note-update-issue-ex)
+      =>
+      (just (->NoteUpdate 8475
+                          "Kyle Whalen"
                           "Sites should be able to manage their contact information"
-                          "13"
-                          "18"
-                          "http://redmine.visiontree.com/issues/8475#1"
-                          "#1"
+                          "Login card updated successfully. "
+                          "http://redmine.visiontree.com/issues/8475#note-2"
+                          "#2"
                           "2014-08-21T21:48:35Z")))
+       
+    (fact "it determines an update is just a status change"
+      (determine-update status-update-issue-ex)
+      =>
+      (just (->StatusUpdate 8475
+                            "Kyle Whalen"
+                            "Sites should be able to manage their contact information"
+                            "13"
+                            "18"
+                            "QA Passed"
+                            "http://redmine.visiontree.com/issues/8475#note-1"
+                            "#1"
+                            "2014-08-21T21:48:35Z")))
 
-  (fact "it determines an update is both a status
+    (fact "it determines an update is both a status
          update and a note update"
-    (determine-update status-and-note-update-issue-ex)
-    =>
-    (just (->NoteAndStatusUpdate "Danny Armstrong"
-                                 "Sites should be able to manage their contact information"
-                                 "Login card updated successfully. "
-                                 "13"
-                                 "18"
-                                 "http://redmine.visiontree.com/issues/8475#2"
-                                 "#2"
-                                 "2014-08-21T21:48:35Z"))))
+      (determine-update status-and-note-update-issue-ex)
+      =>
+      (just (->NoteAndStatusUpdate 8475
+                                   "Kyle Whalen"
+                                   "Sites should be able to manage their contact information"
+                                   "Login card updated successfully. "
+                                   "13"
+                                   "18"
+                                   "http://redmine.visiontree.com/issues/8475#note-2"
+                                   "#2"
+                                   "2014-08-21T21:48:35Z")))))
 
 (facts "about contains-every?"
        (fact "it returns true if each path is found. Value can be nil."
@@ -159,7 +166,14 @@
                                         [:relations]))
                               [[:id] [:delay]])
              =>
-             true))
+             true)
+       (fact "it returns false if path not found. Value can be nil."
+             (contains-every? (last 
+                                (get-in status-update-issue-ex
+                                        [:relations]))
+                              [[:id] [:delNOTHERE]])
+             =>
+             false))
 
 (facts "about format-time-ago"
        (fact "intervals a year ago or greater show 14y"
