@@ -204,3 +204,28 @@
                                 (time-core/seconds 30)))
              =>
              "30s"))
+
+
+(facts "about merge-updates"
+  (fact "it places newer updates by id at the head"
+    (merge-updates [{:id 12 :v "no one updates me:(" :ts 1201} 
+                    {:id 14 :v "been there" :ts 1200}]
+                   [{:id 14 :v "been there again" :ts 1203}
+                    {:id 15 :v "new here" :ts 1202}])
+    =>
+    [{:id 14 :v "been there again" :ts 1203}
+     {:id 15 :v "new here" :ts 1202}
+     {:id 12 :v "no one updates me:(" :ts 1201}])
+  (fact "if one arg is an empty vector we're all good"
+    (merge-updates []
+                   [{:id 14 :v "been there again" :ts 1203}
+                    {:id 15 :v "new here" :ts 1202}])
+    =>
+    [{:id 14 :v "been there again" :ts 1203}
+     {:id 15 :v "new here" :ts 1202}]))
+
+(facts "about last-update-ts"
+  (fact "it's a clj-time instance"
+    (type @last-update-ts)
+    =>
+    (type (time-core/now))))

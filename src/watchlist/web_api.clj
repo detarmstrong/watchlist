@@ -3,6 +3,8 @@
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
   (:require [clojure.core.memoize :refer [memo]])
+  (:require [clj-time.core :as time-core])
+  (:require [clj-time.format :as time-format])
   (:use [cheshire.core :only (generate-string)])
   (:use [clojure.string :only (trim)]))
 
@@ -40,16 +42,27 @@
                                    :throw-exceptions false})]
     (= 200 (:status response))))
 
+(defn iso-8601-fmt [ts]
+  (time-format/unparse (time-format/formatters :date-time-no-ms) ts))
+
+(defn YYYY-mm-dd-fmt [ts]
+  (time-format/unparse (time-format/formatter "YYYY-MM-dd") ts))
+
 (defn get-updated-issues [since-ts]
   "Return issues updated since-ts"
-  (let [response (client/get
+  (let [iso-ts (iso-8601-fmt since-ts)
+        response (client/get
                    "http://redmine.visiontree.com/issues.json"
                    {:as :json
                     :basic-auth [api-token ""]
                     :query-params {:status_id "*"
-                                   :updated_on (str ">=" since-ts)
+                                   :updated_on (str
+                                                 ">="
+                                                 iso-ts)
                                    :sort "updated_on:desc"
-                                   :limit 10}})]
+                                   :limit 35}
+                    :debug false
+                    :debug-body false})]
     (get-in response [:body :issues])))
 
 (defn issue [id]
@@ -60,7 +73,8 @@
         (#(Integer/parseInt %) (trim id))) 
       {:as :json
        :basic-auth [api-token ""]
-       :query-params {:include "children,journals,watchers,relations"}})
+       :query-params {:include "children,journals,watchers,relations"}
+       :debug false})
     [:body :issue]))
 
 (defn issue-statuses []

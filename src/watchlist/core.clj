@@ -9,7 +9,8 @@
             [seesaw.border :refer [empty-border]]
             [seesaw.keymap :refer :all]
             [seesaw.mig :refer :all]
-            [seesaw.swingx :refer [hyperlink]]
+            [seesaw.swingx :refer [hyperlink busy-label]]
+            [seesaw.bind :as bind] 
             [clj-http.util :refer [url-encode]]
             [overtone.at-at :as at-at]
             [clj-time.core :as time-core]
@@ -33,7 +34,18 @@
                   s)
        :south (border-panel 
                 :border [(empty-border :thickness 6)]
-                :west "Feed fresh as of 3 minutes ago"
+                :west (horizontal-panel
+                        :items [;"Feed fresh as of 3 minutes ago  "
+                                (label
+                                  :text "<html><a href=''>Check now</a>&nbsp;&nbsp;<html>  "
+                                  :id :check-now
+                                  :cursor :hand)
+                                (busy-label
+                                  :text ""
+                                  :visible? false
+                                  :id :fetching-indicator
+                                  :busy? true)])
+                                   
                 :east (button :id :settings
                                           :icon (io/resource
                                                   "gear.png")))))
@@ -155,9 +167,11 @@
                   :tip "Open in browser")
                 :text (:update-uri-label data))
        "wrap"]
-      [(label :text (str (first (clojure.string/split (:author data) #"\s"))
+      [(label :text (str (first
+                           (clojure.string/split (:author data) #"\s"))
                          ", "
-                         (format-time-ago (time-format/parse (:updated-at data))))
+                         (format-time-ago
+                           (time-format/parse (:updated-at data))))
               :tip (str "Updated at "
                         (time-format/unparse 
                           (time-format/formatter-local
@@ -174,14 +188,14 @@
         :multi-line? true
         :editable? false
         :wrap-lines? true
-        :background (color "lightgray")
+        :background (color "#eeeeee")
         :margin 5)
       "span 2 2, gap 8, growx, wrap"]]))
 
 (defn get-issue-updates [from-ts]
   "Iterate issue updates and convert to simple map to 
    hand to View func"
-  (filter
+  (filterv
     #(not (nil? %))
     (map
       #(determine-update
@@ -189,22 +203,72 @@
            (get-in % [:id])))
       (api/get-updated-issues from-ts))))
 
+(def master-updates
+  "The 'Model' that holds all updates to be rendered in view"
+  (atom []))
+
+(defn set-master-updates [new-updates-list]
+  (reset! master-updates new-updates-list))
+
+(def last-update-ts (atom (time-core/now)))
+
+(defn set-last-update-ts [ts]
+  (reset! last-update-ts ts))
+
+(def fetching-updates (atom false))
+
+(defn set-fetching-updates [busy?]
+  (reset! fetching-updates busy?))
+
+(defn merge-updates [old-list new-list]
+  "Take old-list of updates and merge new-list by
+   first removing duplicate issue id items in old list
+   and prepending new-list"
+  (let [new-update-ids (reduce
+                         (fn [accum value]
+                           (conj accum (:id value)))
+                         #{}
+                         new-list)
+        filtered-old-list (filterv
+                            (fn [old-value]
+                              (not-any? #(= (:id old-value) %)
+                                new-update-ids))
+                            old-list)]
+    (into new-list filtered-old-list)))
+
 (def watchlist-frame
   (frame
     :title "WatchList"
     :on-close :exit
     :content (frame-content)))
 
-(defn show-frame []
+(defn set-update-items-list-ui [from-date]
+  (set-last-update-ts (time-core/now))
+  (set-fetching-updates true)
+  (let [issue-updates (get-issue-updates from-date)
+        merged-items (merge-updates @master-updates issue-updates)
+        built-items (mapv
+                      build-update-row
+                      merged-items)]
+      (set-master-updates merged-items)
+      (seesaw.core/config!
+        (seesaw.core/select
+          watchlist-frame
+          [:#updates-panel])
+        :items built-items)
+      ;TODO scrolling to top doesn't seem to work consistently
+      (scroll! (select watchlist-frame [:#updates-panel]) :to :top)
+      (set-fetching-updates false)))
+
+(defn start-app []
   (api/load-token)
   (-> watchlist-frame pack! show!)
   (config! watchlist-frame :content (frame-content))
-  (doseq [item (select watchlist-frame [:#updates-panel :> :*])]
-    (remove! (select watchlist-frame [:#updates-panel]) item))
-  (doseq [record (watchlist.core/get-issue-updates "2014-08-21")]
-      (add! 
-        (select watchlist-frame [:#updates-panel])
-        (build-update-row record))))
+  (bind/bind
+    fetching-updates
+    (bind/property (select watchlist-frame [:#fetching-indicator]) :visible?))
+  (listen (select watchlist-frame [:#check-now])
+    :mouse-clicked (fn [evt-source]
+                     (set-update-items-list-ui @last-update-ts)))
+  (set-update-items-list-ui (time-core/date-time 2014 8 22)))
 
-;
-;(show-frame)
