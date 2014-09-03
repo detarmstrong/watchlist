@@ -160,7 +160,7 @@
                          " "
                          (:subject data))
               :font "ARIAL-BOLD-14")
-       "span 2"]
+       "span 2, growx, w 240:400:700"]
       ; Hack to get the text to set. :text on hyperlink did not work
       [(config! (hyperlink
                   :uri (:update-uri data)
@@ -190,7 +190,7 @@
         :wrap-lines? true
         :background (color "#eeeeee")
         :margin 5)
-      "span 2 2, gap 8, growx, wrap"]]))
+      "span 2 2, gap 8, growx, growy, w 240:400:700"]]))
 
 (defn get-issue-updates [from-ts]
   "Iterate issue updates and convert to simple map to 
@@ -242,7 +242,7 @@
     :on-close :exit
     :content (frame-content)
     :size [500 :by 700]
-    :minimum-size [300 :by 200]))
+    :minimum-size [500 :by 500]))
 
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
