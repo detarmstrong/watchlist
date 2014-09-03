@@ -270,6 +270,7 @@
     (bind/property (select watchlist-frame [:#fetching-indicator]) :visible?))
   (listen (select watchlist-frame [:#check-now])
     :mouse-clicked (fn [evt-source]
-                     (set-update-items-list-ui @last-update-ts)))
+                     (set-update-items-list-ui @last-update-ts)
+                     (scroll! (select watchlist-frame [:#updates-panel]) :to :top)))
   (set-update-items-list-ui (time-core/date-time 2014 8 22)))
 
