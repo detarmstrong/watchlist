@@ -37,7 +37,7 @@
                 :west (horizontal-panel
                         :items [;"Feed fresh as of 3 minutes ago  "
                                 (label
-                                  :text "<html><u>Check now</u>&nbsp;&nbsp;<html>  "
+                                  :text "<html><u>Check now</u>&nbsp;&nbsp;<html>"
                                   :id :check-now
                                   :cursor :hand)
                                 (busy-label
@@ -267,10 +267,15 @@
   (config! watchlist-frame :content (frame-content))
   (bind/bind
     fetching-updates
-    (bind/property (select watchlist-frame [:#fetching-indicator]) :visible?))
+    (bind/property
+      (select watchlist-frame [:#fetching-indicator]) :visible?))
   (listen (select watchlist-frame [:#check-now])
     :mouse-clicked (fn [evt-source]
                      (set-update-items-list-ui @last-update-ts)
-                     (scroll! (select watchlist-frame [:#updates-panel]) :to :top)))
+                     (scroll!
+                       (select
+                         watchlist-frame
+                         [:#updates-panel])
+                       :to :top)))
   (set-update-items-list-ui (time-core/date-time 2014 8 22)))
 
