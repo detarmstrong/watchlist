@@ -240,7 +240,9 @@
   (frame
     :title "WatchList"
     :on-close :exit
-    :content (frame-content)))
+    :content (frame-content)
+    :size [500 :by 700]
+    :minimum-size [300 :by 200]))
 
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
