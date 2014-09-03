@@ -37,7 +37,7 @@
                 :west (horizontal-panel
                         :items [;"Feed fresh as of 3 minutes ago  "
                                 (label
-                                  :text "<html><a href=''>Check now</a>&nbsp;&nbsp;<html>  "
+                                  :text "<html><u>Check now</u>&nbsp;&nbsp;<html>  "
                                   :id :check-now
                                   :cursor :hand)
                                 (busy-label
