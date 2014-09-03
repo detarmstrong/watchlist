@@ -247,20 +247,19 @@
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
   (set-fetching-updates true)
-  (let [issue-updates (get-issue-updates from-date)
-        merged-items (merge-updates @master-updates issue-updates)
-        built-items (mapv
-                      build-update-row
-                      merged-items)]
-      (set-master-updates merged-items)
-      (seesaw.core/config!
-        (seesaw.core/select
-          watchlist-frame
-          [:#updates-panel])
-        :items built-items)
-      ;TODO scrolling to top doesn't seem to work consistently
-      (scroll! (select watchlist-frame [:#updates-panel]) :to :top)
-      (set-fetching-updates false)))
+  (future
+    (let [issue-updates (get-issue-updates from-date)
+          merged-items (merge-updates @master-updates issue-updates)
+          built-items (mapv
+                        build-update-row
+                        merged-items)]
+        (set-master-updates merged-items)
+        (seesaw.core/config!
+          (seesaw.core/select
+            watchlist-frame
+            [:#updates-panel])
+          :items built-items)
+        (set-fetching-updates false))))
 
 (defn start-app []
   (api/load-token)
