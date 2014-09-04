@@ -149,6 +149,13 @@
       ;or just filter out the nils?
       )))
 
+(defn make-label-text [author updated-at]
+  (str (first
+      (clojure.string/split author #"\s"))
+    ", "
+    (format-time-ago
+      updated-at)))
+  
 (defn build-update-row [data]
   (mig-panel 
     :border [(empty-border :thickness 0)]
@@ -167,17 +174,27 @@
                   :tip "Open in browser")
                 :text (:update-uri-label data))
        "wrap"]
-      [(label :text (str (first
-                           (clojure.string/split (:author data) #"\s"))
-                         ", "
-                         (format-time-ago
-                           (time-format/parse (:updated-at data))))
-              :tip (str "Updated at "
-                        (time-format/unparse 
-                          (time-format/formatter-local
-                            "MM/dd/yyyy hh:mm:ssa")
-                          (time-local/to-local-date-time
-                            (:updated-at data)))))]
+      [(let [l (label
+                 :text (make-label-text (:author data) (time-format/parse (:updated-at data)))
+                 :tip (str "Updated at "
+                           (time-format/unparse 
+                             (time-format/formatter-local
+                               "MM/dd/yyyy hh:mm:ssa")
+                             (time-local/to-local-date-time
+                               (:updated-at data)))
+                           " by "
+                           (:author data)))
+             t (seesaw.timer/timer (fn [_]
+                                     (config!
+                                       l
+                                       :text
+                                       (make-label-text
+                                         (:author data)
+                                         (time-format/parse (:updated-at data))))
+                                     -1)
+                                     :delay 60000
+                                     :initial-delay 60000)]
+         l)]
       [(text :text (cond
                      (or (instance? NoteUpdate data)
                          (instance? NoteAndStatusUpdate data))

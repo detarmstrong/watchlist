@@ -1,0 +1,4 @@
+(-> watchlist-frame)
+(-> watchlist-frame pack! show!)
+(-> watchlist-frame)
+(show-frame)
