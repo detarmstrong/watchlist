@@ -7,6 +7,7 @@
             [seesaw.core :refer :all]
             [seesaw.color :refer :all]
             [seesaw.border :refer [empty-border]]
+            [seesaw.font :refer [font default-font]]
             [seesaw.keymap :refer :all]
             [seesaw.mig :refer :all]
             [seesaw.swingx :refer [hyperlink busy-label]]
@@ -17,6 +18,53 @@
             [clj-time.format :as time-format]
             [clj-time.local :as time-local])
   (:import (java.awt Desktop)))
+
+(defn open-options-dialog []
+  (-> (dialog
+        :content (mig-panel
+                   :items [
+                     [(label
+                        :font (font :from (default-font "Label.font")
+                                    :style :bold
+                                    :size 24)
+                        :text "Settings")
+                      "wrap"]
+                     [(label
+                        :font (font :from (default-font "Label.font")
+                                    :style :bold)
+                        :text "Redmine API Key")
+                      "gaptop 5, wrap"]
+                     [(text :columns 20
+                            :id :redmine-api-key)
+                      "wrap"]
+                     [(label
+                        :font (font :from (default-font "Label.font")
+                                    :style :bold)
+                        :text "Show me updates for tickets where ...")
+                      "gaptop 5, wrap"]
+                     [(checkbox :text "I'm the assignee")
+                      "wrap"]
+                     [(checkbox :text "I'm a watcher")
+                      "wrap"]
+                     [(checkbox :text "I'm the author")
+                      "wrap"]
+                     [(checkbox :text "The ticket is related to one of my tickets")
+                      "wrap"]
+                     [(checkbox :text "I've participated in the ticket updates")
+                      "wrap"]
+                     [(checkbox :text "I'm mentioned in the ticket or an update to the ticket")
+                      "wrap"]
+                     ])
+         ;:options [(action :name "Save" :handler (fn [e]
+         ;                                          (return-from-dialog e :save)))
+         ;          (action :name "Cancel" :handler (fn [e]
+         ;                                            (return-from-dialog e :cancel)))]
+         :option-type :ok-cancel
+         :success-fn (fn [p]
+                       {:api-key (config (select (to-frame p) [:#redmine-api-key]) :text)})
+         :cancel-fn (fn [p] nil))
+    
+    pack! show!))
 
 (defn frame-content []
   (border-panel
@@ -46,9 +94,12 @@
                                   :id :fetching-indicator
                                   :busy? true)])
                                    
-                :east (button :id :settings
-                                          :icon (io/resource
-                                                  "gear.png")))))
+                :east (action :name ""
+                              :icon (io/resource
+                                      "gear.png")
+                              :handler (fn [e]
+                                         (alert
+                                           (str (open-options-dialog))))))))
 
 (defn contains-every? [m keyseqs]
   (let [not-found (Object.)]
