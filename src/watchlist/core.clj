@@ -174,8 +174,10 @@
                   :tip "Open in browser")
                 :text (:update-uri-label data))
        "wrap"]
-      [(let [l (label
-                 :text (make-label-text (:author data) (time-format/parse (:updated-at data)))
+      [(let [parsed-updated-at (time-format/parse (:updated-at data))
+             initial-delay (- 60 (time-core/second parsed-updated-at))
+             l (label
+                 :text (make-label-text (:author data) parsed-updated-at)
                  :tip (str "Updated at "
                            (time-format/unparse 
                              (time-format/formatter-local
@@ -190,10 +192,10 @@
                                        :text
                                        (make-label-text
                                          (:author data)
-                                         (time-format/parse (:updated-at data))))
+                                         parsed-updated-at))
                                      -1)
                                      :delay 60000
-                                     :initial-delay 60000)]
+                                     :initial-delay initial-delay)]
          l)]
       [(text :text (cond
                      (or (instance? NoteUpdate data)
