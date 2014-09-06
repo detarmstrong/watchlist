@@ -19,7 +19,28 @@
             [clj-time.local :as time-local])
   (:import (java.awt Desktop)))
 
-(defn open-options-dialog []
+(def current-user (atom {:id nil :name nil})) 
+(defn set-current-user [id name]
+  (reset! current-user {:id id :name name}))
+
+(def master-updates
+  "The 'Model' that holds all updates to be rendered in view"
+  (atom []))
+
+(defn set-master-updates [new-updates-list]
+  (reset! master-updates new-updates-list))
+
+(def last-update-ts (atom (time-core/now)))
+
+(defn set-last-update-ts [ts]
+  (reset! last-update-ts ts))
+
+(def fetching-updates (atom false))
+
+(defn set-fetching-updates [busy?]
+  (reset! fetching-updates busy?))
+
+(defn open-options-dialog [e]
   (-> (dialog
         :content (mig-panel
                    :items [
@@ -42,23 +63,30 @@
                                     :style :bold)
                         :text "Show me updates for tickets where ...")
                       "gaptop 5, wrap"]
-                     [(checkbox :text "I'm the assignee")
+                     [(checkbox :text "I'm the assignee"
+                                :id :im-the-assignee)
                       "wrap"]
-                     [(checkbox :text "I'm a watcher")
+                     [(checkbox :text "I'm a watcher"
+                                :id :im-a-watcher)
                       "wrap"]
-                     [(checkbox :text "I'm the author")
+                     [(checkbox :text "I'm the author"
+                                :id :im-the-author)
                       "wrap"]
-                     [(checkbox :text "The ticket is related to one of my tickets")
+                     [(checkbox :text "The ticket is related to one of my tickets"
+                                :id :related-ticket)
                       "wrap"]
-                     [(checkbox :text "I've participated in the ticket updates")
+                     [(checkbox :text "I've participated in the ticket updates"
+                                :id :participated-in-updates)
                       "wrap"]
-                     [(checkbox :text "I'm mentioned in the ticket or an update to the ticket")
+                     [(checkbox :text "I'm mentioned in the ticket or an update to the ticket"
+                                :id :mentioned-in-updates)
                       "wrap"]
                      ])
          ;:options [(action :name "Save" :handler (fn [e]
          ;                                          (return-from-dialog e :save)))
          ;          (action :name "Cancel" :handler (fn [e]
          ;                                            (return-from-dialog e :cancel)))]
+         :parent (to-widget e)
          :option-type :ok-cancel
          :success-fn (fn [p]
                        {:api-key (config (select (to-frame p) [:#redmine-api-key]) :text)})
@@ -99,7 +127,7 @@
                                       "gear.png")
                               :handler (fn [e]
                                          (alert
-                                           (str (open-options-dialog))))))))
+                                           (str (open-options-dialog e))))))))
 
 (defn contains-every? [m keyseqs]
   (let [not-found (Object.)]
@@ -276,23 +304,6 @@
            (get-in % [:id])))
       (api/get-updated-issues from-ts))))
 
-(def master-updates
-  "The 'Model' that holds all updates to be rendered in view"
-  (atom []))
-
-(defn set-master-updates [new-updates-list]
-  (reset! master-updates new-updates-list))
-
-(def last-update-ts (atom (time-core/now)))
-
-(defn set-last-update-ts [ts]
-  (reset! last-update-ts ts))
-
-(def fetching-updates (atom false))
-
-(defn set-fetching-updates [busy?]
-  (reset! fetching-updates busy?))
-
 (defn merge-updates [old-list new-list]
   "Take old-list of updates and merge new-list by
    first removing duplicate issue id items in old list
@@ -350,5 +361,11 @@
                          watchlist-frame
                          [:#updates-panel])
                        :to :top)))
+  (let [u (api/current-user (api/get-token))]
+    (set-current-user
+      (get-in u [:user :id])
+      (str (get-in u [:user :firstname])
+           " "
+           (get-in u [:user :lastname]))))
   (set-update-items-list-ui (time-core/date-time 2014 8 22)))
 

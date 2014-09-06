@@ -22,6 +22,9 @@
   (def api-token 
     (trim (slurp obelisk-token-file-path))))
 
+(defn get-token []
+  @(load-token))
+
 (defn projects []
   (sort-by :name
 	  (get-in 
@@ -32,6 +35,16 @@
 	       :query-params {:limit 300}})
 	    [:body :projects])))
 
+(defn current-user [api-token]
+  "Retrieve authenticated user info via token"
+  (let [response (client/get "http://redmine.visiontree.com/users/current.json" 
+                                  {:basic-auth [api-token "d"]
+                                   :as :json
+                                   :socket-timeout 9000
+                                   :conn-timeout 8000
+                                   :throw-exceptions false})]
+    (get-in response [:body])))
+  
 (defn valid-token? [api-token]
   "Make a request using the token provided, expect 200"
   (let [response (client/get "http://redmine.visiontree.com/users/current.json" 
