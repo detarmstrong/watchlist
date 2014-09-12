@@ -1,6 +1,7 @@
 (ns watchlist.t-core
   (:require [clj-time.core :as time-core]
-            [clj-time.format :as time-format])
+            [clj-time.format :as time-format]
+            [clojure.edn :as edn])
   (:use midje.sweet)
   (:use [watchlist.core]))
 
@@ -119,11 +120,12 @@
    :spent_hours 0.0,
    :project {:id 1, :name "VTOC "}})
 
-(facts "about determine-update-type"
+(facts "about convert-update"
   (let [updated-at (time-format/parse "2014-08-21T21:48:35Z")]
-    (fact "it determines an update is just a note"
-      (determine-update note-update-issue-ex)
+    (fact "it converts an update to a Note update"
+      (convert-update note-update-issue-ex)
       =>
+      ;TODO add ticket author here
       (just (->NoteUpdate 8475
                           "Kyle Whalen"
                           "Sites should be able to manage their contact information"
@@ -132,8 +134,8 @@
                           "#2"
                           "2014-08-21T21:48:35Z")))
        
-    (fact "it determines an update is just a status change"
-      (determine-update status-update-issue-ex)
+    (fact "it converts an update to a status change"
+      (convert-update status-update-issue-ex)
       =>
       (just (->StatusUpdate 8475
                             "Kyle Whalen"
@@ -145,9 +147,9 @@
                             "#1"
                             "2014-08-21T21:48:35Z")))
 
-    (fact "it determines an update is both a status
+    (fact "it converts an update to a hybrid status
          update and a note update"
-      (determine-update status-and-note-update-issue-ex)
+      (convert-update status-and-note-update-issue-ex)
       =>
       (just (->NoteAndStatusUpdate 8475
                                    "Kyle Whalen"
@@ -205,9 +207,9 @@
              =>
              "30s"))
 
-
 (facts "about merge-updates"
-  (fact "it places newer updates by id at the head"
+  (fact "it places newer updates by id at the head. assumes items already 
+         descendingly sorted"
     (merge-updates [{:id 12 :v "no one updates me:(" :ts 1201} 
                     {:id 14 :v "been there" :ts 1200}]
                    [{:id 14 :v "been there again" :ts 1203}
@@ -229,3 +231,29 @@
     (type @last-update-ts)
     =>
     (type (time-core/now))))
+
+(def static-issue-updates
+  "Represent the list of issues as returned by redmine api.
+   DOES NOT include details like :journal or :watcher"
+  (edn/read-string (slurp "dev-resources/get-updated-issues.clj")))
+
+(facts "about predicates for tagging updates by user criteria"
+ (fact "is-assignee? will return true if the arg is the assignee"
+   (is-assignee?
+     ; 67=unassignedDev
+     67
+     (convert-update (first static-issue-updates)))
+   =>
+   true)
+ (fact "is-author? will return true if the arg is the author"
+   (is-author?
+     5
+     (convert-update status-and-note-update-issue-ex))
+   =>
+   true)
+ (fact "is-related-ticket? returns true if a ticket is related to this one"
+   (is-related-ticket?
+     all-my-tickets
+     (convert-update status-and-note-update-issue-ex))
+   =>
+   {:related? true :how [{:blocked-by 1234}]}))

@@ -161,7 +161,8 @@
    or a StatusUpdate or both or something else and return it"
   (let [issue-id (-> issue :id)
         subject (-> issue :subject)
-        author (-> issue :author :name)
+        ticket-author (-> issue :author :name)
+        ticket-author-id (-> issue :author :id)
         update-rank (count (-> issue :journals))
         update-uri (str "http://redmine.visiontree.com/issues/"
                          issue-id
@@ -180,6 +181,7 @@
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
         (NoteAndStatusUpdate. issue-id
+                              ticket-author-id
                               update-author
                               subject
                               update-text
@@ -198,6 +200,7 @@
             new-status (-> last-journal-entry :details (last) :new_value)
             new-status-label (api/get-issue-status-name-by-id new-status)]
         (StatusUpdate. issue-id
+                       ticket-author-id
                        update-author
                        subject
                        old-status
@@ -217,6 +220,7 @@
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
         (NoteUpdate. issue-id
+                     ticket-author-id
                      update-author
                      subject
                      update-text
@@ -256,7 +260,7 @@
       [(let [parsed-updated-at (time-format/parse (:updated-at data))
              initial-delay (- 60 (time-core/second parsed-updated-at))
              l (label
-                 :text (make-label-text (:author data) parsed-updated-at)
+                 :text (make-label-text (:update-author data) parsed-updated-at)
                  :tip (str "Updated at "
                            (time-format/unparse 
                              (time-format/formatter-local
@@ -264,13 +268,13 @@
                              (time-local/to-local-date-time
                                (:updated-at data)))
                            " by "
-                           (:author data)))
+                           (:update-author data)))
              t (seesaw.timer/timer (fn [_]
                                      (config!
                                        l
                                        :text
                                        (make-label-text
-                                         (:author data)
+                                         (:update-author data)
                                          parsed-updated-at))
                                      -1)
                                      :delay 60000
