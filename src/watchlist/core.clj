@@ -72,7 +72,7 @@
                      [(checkbox :text "I'm the author"
                                 :id :im-the-author)
                       "wrap"]
-                     [(checkbox :text "The ticket is related to one of my tickets"
+                     [(checkbox :text "The ticket is related to one of my assigned tickets"
                                 :id :related-ticket)
                       "wrap"]
                      [(checkbox :text "I've participated in the ticket updates"
@@ -82,14 +82,14 @@
                                 :id :mentioned-in-updates)
                       "wrap"]
                      ])
-         ;:options [(action :name "Save" :handler (fn [e]
-         ;                                          (return-from-dialog e :save)))
-         ;          (action :name "Cancel" :handler (fn [e]
-         ;                                            (return-from-dialog e :cancel)))]
          :parent (to-widget e)
          :option-type :ok-cancel
          :success-fn (fn [p]
-                       {:api-key (config (select (to-frame p) [:#redmine-api-key]) :text)})
+                       {:api-key (config
+                                   (select
+                                     (to-frame p)
+                                     [:#redmine-api-key])
+                                   :text)})
          :cancel-fn (fn [p] nil))
     
     pack! show!))
@@ -152,11 +152,54 @@
       (>= delta-minutes 1) (str delta-minutes "m")
       :else (str delta-seconds "s"))))
 
-(defrecord NoteUpdate [id author subject update-text update-uri update-uri-label updated-at])
-(defrecord StatusUpdate [id author subject old-status new-status new-status-label update-uri update-uri-label updated-at])
-(defrecord NoteAndStatusUpdate [id author subject update-text old-status new-status update-uri update-uri-label updated-at])
+;predicates for filtering updates
+(defn is-assignee? [user-id update-record]
+  "Given a user id and NoteUpdate, Status update etc record,
+   determine if user-id is the assignee"
+  (= user-id (:assignee update-record)))
 
-(defn determine-update [issue]
+(defn is-author? [user-id update-record]
+  (= user-id (:ticket-author update-record)))
+
+(defn is-related-ticket? [user-id all-my-tickets update-record]
+  "Determine if this ticket is related or family related to
+   a ticket assigned to me or authored by me"
+  (let [related-tickets (-> update-record :relations)]
+    (set/intersection
+      (set/union (my-tickets)
+                 (authored-tickets :by-me))
+      (related-tickets))))
+
+(defrecord NoteUpdate [id
+                       ticket-author
+                       update-author
+                       subject
+                       update-text
+                       update-uri
+                       update-uri-label
+                       updated-at])
+(defrecord StatusUpdate [id
+                         ticket-author
+                         update-author
+                         subject
+                         old-status
+                         new-status
+                         new-status-label
+                         update-uri
+                         update-uri-label
+                         updated-at])
+(defrecord NoteAndStatusUpdate [id
+                                ticket-author
+                                update-author
+                                subject
+                                update-text
+                                old-status
+                                new-status
+                                update-uri
+                                update-uri-label
+                                updated-at])
+
+(defn convert-update [issue]
   "Given an issue update determine if it's a NoteUpdate
    or a StatusUpdate or both or something else and return it"
   (let [issue-id (-> issue :id)
@@ -303,7 +346,7 @@
   (filterv
     #(not (nil? %))
     (map
-      #(determine-update
+      #(convert-update
          (api/issue
            (get-in % [:id])))
       (api/get-updated-issues from-ts))))
