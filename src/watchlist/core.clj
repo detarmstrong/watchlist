@@ -19,6 +19,8 @@
             [clj-time.local :as time-local])
   (:import (java.awt Desktop)))
 
+(declare convert-update)
+
 (def current-user (atom {:id nil :name nil})) 
 (defn set-current-user [id name]
   (reset! current-user {:id id :name name}))
@@ -161,14 +163,28 @@
 (defn is-author? [user-id update-record]
   (= user-id (:ticket-author update-record)))
 
-(defn is-related-ticket? [user-id all-my-tickets update-record]
+(defn is-related-ticket? [user-id update-record]
   "Determine if this ticket is related or family related to
    a ticket assigned to me or authored by me"
   (let [related-tickets (-> update-record :relations)]
-    (set/intersection
-      (set/union (my-tickets)
-                 (authored-tickets :by-me))
-      (related-tickets))))
+    (reduce
+      (fn [accum val]
+        (let [maybe-related-issue (api/issue (-> update-record :id))]
+          (if
+            (and
+              (is-assignee? user-id (convert-update maybe-related-issue))
+              (is-author? user-id (convert-update maybe-related-issue)))
+            (conj accum
+              {:related? true
+               :reason (:relation_type val)
+               :id (:issue_id val)})
+            accum)))
+      []
+      related-tickets)))
+    ;(set/intersection
+    ;  (set/union (my-tickets)
+    ;             (authored-tickets :by-me))
+    ;  (related-tickets))))
 
 (defrecord NoteUpdate [id
                        ticket-author
@@ -208,9 +224,9 @@
         ticket-author-id (-> issue :author :id)
         update-rank (count (-> issue :journals))
         update-uri (str "http://redmine.visiontree.com/issues/"
-                         issue-id
-                         "#note-"
-                         update-rank)
+                        issue-id
+                        "#note-"
+                        update-rank)
         update-uri-label (str "#" update-rank)
         updated-at (-> issue :updated_on)]
     (cond

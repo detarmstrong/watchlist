@@ -253,7 +253,9 @@
    true)
  (fact "is-related-ticket? returns true if a ticket is related to this one"
    (is-related-ticket?
-     all-my-tickets
+     5
      (convert-update status-and-note-update-issue-ex))
    =>
-   {:related? true :how [{:blocked-by 1234}]}))
+   {:related? true
+    :reason "related"
+    :id 65}))
