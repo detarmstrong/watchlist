@@ -87,7 +87,8 @@
       {:as :json
        :basic-auth [api-token ""]
        :query-params {:include "children,journals,watchers,relations"}
-       :debug false})
+       :debug false
+       :throw-exceptions true})
     [:body :issue]))
 
 (defn issue-statuses []
