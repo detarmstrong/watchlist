@@ -19,6 +19,7 @@
             [clj-time.local :as time-local])
   (:import (java.awt Desktop)))
 
+
 (declare convert-update)
 
 (def current-user (atom {:id nil :name nil})) 
@@ -158,10 +159,10 @@
 (defn is-assignee? [user-id update-record]
   "Given a user id and NoteUpdate, Status update etc record,
    determine if user-id is the assignee"
-  (= user-id (:assignee update-record)))
+  (= user-id (:assignee-id update-record)))
 
 (defn is-author? [user-id update-record]
-  (= user-id (:ticket-author update-record)))
+  (= user-id (:ticket-author-id update-record)))
 
 (defn is-related-ticket? [user-id update-record]
   "Determine if this ticket is related or family related to
@@ -169,7 +170,7 @@
   (let [related-tickets (-> update-record :relations)]
     (reduce
       (fn [accum val]
-        (let [maybe-related-issue (api/issue (-> update-record :id))]
+        (let [maybe-related-issue (api/issue (-> val :issue_id))]
           (if
             (and
               (is-assignee? user-id (convert-update maybe-related-issue))
@@ -181,22 +182,22 @@
             accum)))
       []
       related-tickets)))
-    ;(set/intersection
-    ;  (set/union (my-tickets)
-    ;             (authored-tickets :by-me))
-    ;  (related-tickets))))
 
 (defrecord NoteUpdate [id
-                       ticket-author
+                       assignee-id
+                       ticket-author-id
                        update-author
+                       relations
                        subject
                        update-text
                        update-uri
                        update-uri-label
                        updated-at])
 (defrecord StatusUpdate [id
-                         ticket-author
+                         assignee-id
+                         ticket-author-id
                          update-author
+                         relations
                          subject
                          old-status
                          new-status
@@ -205,8 +206,10 @@
                          update-uri-label
                          updated-at])
 (defrecord NoteAndStatusUpdate [id
-                                ticket-author
+                                assignee-id
+                                ticket-author-id
                                 update-author
+                                relations
                                 subject
                                 update-text
                                 old-status
@@ -220,7 +223,7 @@
    or a StatusUpdate or both or something else and return it"
   (let [issue-id (-> issue :id)
         subject (-> issue :subject)
-        ticket-author (-> issue :author :name)
+        assignee-id (-> issue :assigned_to :id)
         ticket-author-id (-> issue :author :id)
         update-rank (count (-> issue :journals))
         update-uri (str "http://redmine.visiontree.com/issues/"
@@ -228,7 +231,8 @@
                         "#note-"
                         update-rank)
         update-uri-label (str "#" update-rank)
-        updated-at (-> issue :updated_on)]
+        updated-at (-> issue :updated_on)
+        relations (-> issue :relations)]
     (cond
       ; first check if NoteAndStatus
       (and
@@ -240,8 +244,10 @@
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
         (NoteAndStatusUpdate. issue-id
+                              assignee-id
                               ticket-author-id
                               update-author
+                              relations
                               subject
                               update-text
                               old-status
@@ -259,8 +265,10 @@
             new-status (-> last-journal-entry :details (last) :new_value)
             new-status-label (api/get-issue-status-name-by-id new-status)]
         (StatusUpdate. issue-id
+                       assignee-id
                        ticket-author-id
                        update-author
+                       relations
                        subject
                        old-status
                        new-status
@@ -279,8 +287,10 @@
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
         (NoteUpdate. issue-id
+                     assignee-id
                      ticket-author-id
                      update-author
+                     relations
                      subject
                      update-text
                      update-uri
@@ -410,6 +420,7 @@
 
 (defn start-app []
   (api/load-token)
+  (native!)
   (-> watchlist-frame pack! show!)
   (config! watchlist-frame :content (frame-content))
   (bind/bind
