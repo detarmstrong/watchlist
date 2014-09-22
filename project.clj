@@ -10,6 +10,6 @@
                  [org.clojure/core.memoize "0.5.6"]
                  [overtone/at-at "1.2.0"]
                  [clj-time "0.8.0"]]
-  :profiles {:dev {:dependencies [[midje "1.5.0"]]}}
+  :profiles {:dev {:dependencies [[midje "1.6.3"]]}}
   :main watchlist.core
   :jvm-opts ["-Xmx128m"])
