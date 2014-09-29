@@ -365,7 +365,9 @@
       [(let [parsed-updated-at (time-format/parse (:updated-at record))
              initial-delay (- 60 (time-core/second parsed-updated-at))
              l (label
-                 :text (make-label-text (:update-author record) parsed-updated-at)
+                 :text (make-label-text
+                         (:update-author record)
+                         parsed-updated-at)
                  :tip (str "Updated at "
                            (time-format/unparse 
                              (time-format/formatter-local
@@ -502,7 +504,6 @@
            " "
            (get-in u [:user :lastname]))))
   (load-preferences good-defaults)
-  (set-update-items-list-ui (time-core/minus (time-core/now) (time-core/days 2))))
-
-
-
+  (set-update-items-list-ui (time-core/minus
+                              (time-core/now)
+                              (time-core/days 2))))
