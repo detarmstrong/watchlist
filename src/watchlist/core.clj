@@ -424,6 +424,12 @@
                             old-list)]
     (into new-list filtered-old-list)))
 
+(defn load-preferences
+  "Load preferences from disk, or load default set"
+  [good-defaults]
+  ;doesn't do anything yet
+  )
+
 (def watchlist-frame
   (frame
     :title "WatchList"
@@ -447,6 +453,7 @@
           tagged-items (tag-updates
                          (:id @current-user)
                          merged-items
+                         ;TODO replace this with preference loaded var
                          '(:is-author? :is-assignee?))
           filtered-items (filterv
                            (fn [item]
@@ -490,8 +497,5 @@
   (load-preferences good-defaults)
   (set-update-items-list-ui (time-core/minus (time-core/now) (time-core/days 2))))
 
-(defn load-preferences
-  "Load preferences from disk, or load default set"
-  [good-defaults]
-  )
+
 
