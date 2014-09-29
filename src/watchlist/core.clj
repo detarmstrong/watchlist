@@ -19,7 +19,6 @@
             [clj-time.local :as time-local])
   (:import (java.awt Desktop)))
 
-
 (declare convert-update)
 
 (def current-user (atom {:id nil :name nil})) 
@@ -42,6 +41,11 @@
 
 (defn set-fetching-updates [busy?]
   (reset! fetching-updates busy?))
+
+(def good-defaults
+  {:is-author? true
+   :is-assignee? true
+   :is-related-ticket? true})
 
 (defn open-options-dialog [e]
   (-> (dialog
@@ -81,7 +85,7 @@
                      [(checkbox :text "I've participated in the ticket updates"
                                 :id :participated-in-updates)
                       "wrap"]
-                     [(checkbox :text "I'm mentioned in the ticket or an update to the ticket"
+                     [(checkbox :text "I'm mentioned in the ticket or in an update to the ticket"
                                 :id :mentioned-in-updates)
                       "wrap"]
                      ])
@@ -182,6 +186,33 @@
             accum)))
       []
       related-tickets)))
+
+(defn in? 
+  "true if seq contains elm"
+  [seq elm]  
+  (some #(= elm %) seq))
+  
+(defn tag-updates [user-id update-list pred-syms]
+  "For each update in update-list, run preds (resolve keyword
+   to real func first) and collect results."
+    (mapv
+      (fn [update]
+        [update (cond
+                  (and
+                    (in? pred-syms :is-author?)
+                    (is-author? user-id update))
+                  '(:is-author)
+                  (and
+                    (in? pred-syms :is-assignee?)
+                    (is-assignee? user-id update))
+                  '(:is-assignee?)
+                  (and
+                    (in? pred-syms :is-related-ticket?)
+                    (is-related-ticket? user-id update))
+                  '(:is-related-ticket?)
+
+                  :else '())])
+      update-list))
 
 (defrecord NoteUpdate [id
                        assignee-id
@@ -308,57 +339,57 @@
     (format-time-ago
       updated-at)))
   
-(defn build-update-row [data]
+(defn build-update-row [[record tags]]
   (mig-panel 
     :border [(empty-border :thickness 0)]
     :background (color "white")
     :constraints ["ins 10", "[][grow][]", "[top]"]
     :items [
       [(label :text (str "#"
-                         (:id data)
+                         (:id record)
                          " "
-                         (:subject data))
+                         (:subject record))
               :font "ARIAL-BOLD-14")
        "span 2, growx, w 240:400:700"]
       ; Hack to get the text to set. :text on hyperlink did not work
       [(config! (hyperlink
-                  :uri (:update-uri data)
+                  :uri (:update-uri record)
                   :tip "Open in browser")
-                :text (:update-uri-label data))
+                :text (:update-uri-label record))
        "wrap"]
-      [(let [parsed-updated-at (time-format/parse (:updated-at data))
+      [(let [parsed-updated-at (time-format/parse (:updated-at record))
              initial-delay (- 60 (time-core/second parsed-updated-at))
              l (label
-                 :text (make-label-text (:update-author data) parsed-updated-at)
+                 :text (make-label-text (:update-author record) parsed-updated-at)
                  :tip (str "Updated at "
                            (time-format/unparse 
                              (time-format/formatter-local
                                "MM/dd/yyyy hh:mm:ssa")
                              (time-local/to-local-date-time
-                               (:updated-at data)))
+                               (:updated-at record)))
                            " by "
-                           (:update-author data)))
+                           (:update-author record)))
              t (seesaw.timer/timer (fn [_]
                                      (config!
                                        l
                                        :text
                                        (make-label-text
-                                         (:update-author data)
+                                         (:update-author record)
                                          parsed-updated-at))
                                      -1)
                                      :delay 60000
                                      :initial-delay initial-delay)]
          l)]
       [(text :text (str (cond
-                          (or (instance? NoteUpdate data)
-                              (instance? NoteAndStatusUpdate data))
-                          (:update-text data)
-                          (or (instance? NoteAndStatusUpdate data)
-                              (instance? StatusUpdate data))
-                          (str (if (instance? NoteAndStatusUpdate data)
+                          (or (instance? NoteUpdate record)
+                              (instance? NoteAndStatusUpdate record))
+                          (:update-text record)
+                          (or (instance? NoteAndStatusUpdate record)
+                              (instance? StatusUpdate record))
+                          (str (if (instance? NoteAndStatusUpdate record)
                                  "\n")
                                "Status set to: "
-                               (:new-status-label data))))
+                               (:new-status-label record))))
         :multi-line? true
         :editable? false
         :wrap-lines? true
@@ -367,11 +398,11 @@
       "span 2 2, gap 8, growx, growy, w 240:400:700"]]))
 
 (defn get-issue-updates [from-ts]
-  "Iterate issue updates and convert to simple map to 
-   hand to View func"
+  "Iterate issue updates and convert to intermediate representation
+   that uses defrecord"
   (filterv
     #(not (nil? %))
-    (map
+    (mapv
       #(convert-update
          (api/issue
            (get-in % [:id])))
@@ -404,19 +435,34 @@
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
   (set-fetching-updates true)
-  (future
+  ;(future
     (let [issue-updates (get-issue-updates from-date)
-          merged-items (merge-updates @master-updates issue-updates)
+          merged-items (merge-updates
+                         ; Dispose of previous tagging - this is useful
+                         ; if the user unchecks an update type
+                         (mapv
+                           first
+                           @master-updates)
+                         issue-updates)
+          tagged-items (tag-updates
+                         (:id @current-user)
+                         merged-items
+                         '(:is-author? :is-assignee?))
+          filtered-items (filterv
+                           (fn [item]
+                             (not (empty? (second item))))
+                           tagged-items)
           built-items (mapv
                         build-update-row
-                        merged-items)]
-        (set-master-updates merged-items)
+                        filtered-items)]
+      (set-master-updates filtered-items)
+      (invoke-later
         (seesaw.core/config!
           (seesaw.core/select
             watchlist-frame
             [:#updates-panel])
-          :items built-items)
-        (set-fetching-updates false))))
+          :items built-items))
+      (set-fetching-updates false)))
 
 (defn start-app []
   (api/load-token)
@@ -441,5 +487,11 @@
       (str (get-in u [:user :firstname])
            " "
            (get-in u [:user :lastname]))))
-  (set-update-items-list-ui (time-core/date-time 2014 8 22)))
+  (load-preferences good-defaults)
+  (set-update-items-list-ui (time-core/minus (time-core/now) (time-core/days 2))))
+
+(defn load-preferences
+  "Load preferences from disk, or load default set"
+  [good-defaults]
+  )
 

@@ -166,7 +166,7 @@
                           5
                           5
                           "Kyle Whalen"
-                          []
+                          [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
                           "Sites should be able to manage their contact information"
                           "Login card updated successfully. "
                           "http://redmine.visiontree.com/issues/8475#note-2"
@@ -180,8 +180,8 @@
                             5
                             5
                             "Kyle Whalen"
-                            []
-                            "Sites should be able to manage their contact information"
+                            [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
+                            "Test related ticket"
                             "13"
                             "18"
                             "QA Passed"
@@ -198,7 +198,7 @@
                                    5
                                    5
                                    "Kyle Whalen"
-                                   []
+                                   [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}] 
                                    "Sites should be able to manage their contact information"
                                    "Login card updated successfully. "
                                    "13"
@@ -311,3 +311,19 @@
    (provided
      (watchlist.web-api/get-issue-status-name-by-id
        "18") => "QA Passed")))
+
+(facts "about update filter pipeline"
+  (fact "each update is scrutinized for inclusion - is-author? and is-assignee?"
+    (second
+      (first
+        (tag-updates
+          5
+          (map
+            convert-update
+            [status-and-note-update-issue-ex])
+          '(:is-author? :is-assignee?))))
+    =>
+    (contains [:is-author? :is-assignee?] :in-any-order)))
+    ;(provided
+    ;  (watchlist.web-api/get-issue-status-name-by-id
+    ;    "18") => "QA Passed")))
