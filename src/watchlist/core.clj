@@ -142,9 +142,10 @@
               (for [ks keyseqs]
                 (get-in m ks not-found)))))
 
-(defn format-time-ago [from-time]
+(defn format-time-ago
   "Return formatted string indicating the time delta between
    now in utc and from-time"
+  [from-time]
   (let [delta (time-core/interval from-time (time-core/now))
         delta-years (time-core/in-years delta)
         delta-days (time-core/in-days delta)
@@ -160,17 +161,19 @@
       :else (str delta-seconds "s"))))
 
 ;predicates for filtering updates
-(defn is-assignee? [user-id update-record]
+(defn is-assignee?
   "Given a user id and NoteUpdate, Status update etc record,
    determine if user-id is the assignee"
+  [user-id update-record]
   (= user-id (:assignee-id update-record)))
 
 (defn is-author? [user-id update-record]
   (= user-id (:ticket-author-id update-record)))
 
-(defn is-related-ticket? [user-id update-record]
+(defn is-related-ticket?
   "Determine if this ticket is related or family related to
    a ticket assigned to me or authored by me"
+  [user-id update-record]
   (let [related-tickets (-> update-record :relations)]
     (reduce
       (fn [accum val]
@@ -192,27 +195,28 @@
   [seq elm]  
   (some #(= elm %) seq))
   
-(defn tag-updates [user-id update-list pred-syms]
+(defn tag-updates
   "For each update in update-list, run preds (resolve keyword
    to real func first) and collect results."
-    (mapv
-      (fn [update]
-        [update (cond
-                  (and
-                    (in? pred-syms :is-author?)
-                    (is-author? user-id update))
-                  '(:is-author)
-                  (and
-                    (in? pred-syms :is-assignee?)
-                    (is-assignee? user-id update))
-                  '(:is-assignee?)
-                  (and
-                    (in? pred-syms :is-related-ticket?)
-                    (is-related-ticket? user-id update))
-                  '(:is-related-ticket?)
+  [user-id update-list pred-syms]
+  (mapv
+    (fn [update]
+      [update (cond
+                (and
+                  (in? pred-syms :is-author?)
+                  (is-author? user-id update))
+                '(:is-author)
+                (and
+                  (in? pred-syms :is-assignee?)
+                  (is-assignee? user-id update))
+                '(:is-assignee?)
+                (and
+                  (in? pred-syms :is-related-ticket?)
+                  (is-related-ticket? user-id update))
+                '(:is-related-ticket?)
 
-                  :else '())])
-      update-list))
+                :else '())])
+    update-list))
 
 (defrecord NoteUpdate [id
                        assignee-id
@@ -249,9 +253,10 @@
                                 update-uri-label
                                 updated-at])
 
-(defn convert-update [issue]
+(defn convert-update
   "Given an issue update determine if it's a NoteUpdate
    or a StatusUpdate or both or something else and return it"
+  [issue]
   (let [issue-id (-> issue :id)
         subject (-> issue :subject)
         assignee-id (-> issue :assigned_to :id)
@@ -397,9 +402,10 @@
         :margin 5)
       "span 2 2, gap 8, growx, growy, w 240:400:700"]]))
 
-(defn get-issue-updates [from-ts]
+(defn get-issue-updates
   "Iterate issue updates and convert to intermediate representation
    that uses defrecord"
+  [from-ts]
   (filterv
     #(not (nil? %))
     (mapv
@@ -408,10 +414,11 @@
            (get-in % [:id])))
       (api/get-updated-issues from-ts))))
 
-(defn merge-updates [old-list new-list]
+(defn merge-updates
   "Take old-list of updates and merge new-list by
    first removing duplicate issue id items in old list
    and prepending new-list"
+  [old-list new-list] 
   (let [new-update-ids (reduce
                          (fn [accum value]
                            (conj accum (:id value)))
