@@ -441,7 +441,7 @@
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
   (set-fetching-updates true)
-  ;(future
+  (future
     (let [issue-updates (get-issue-updates from-date)
           merged-items (merge-updates
                          ; Dispose of previous tagging - this is useful
@@ -469,7 +469,7 @@
             watchlist-frame
             [:#updates-panel])
           :items built-items))
-      (set-fetching-updates false)))
+      (set-fetching-updates false))))
 
 (defn start-app []
   (api/load-token)
