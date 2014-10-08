@@ -13,7 +13,8 @@
    :created_on "2014-08-20T01:52:49Z",
    :author {:id 5, :name "Danny Armstrong"},
    :assigned_to {:id 5, :name "Danny Armstrong"},
-   :watchers [],
+   :watchers [{:id 5 :name "Danny Armstrong"}
+              {:id 6 :name "Jodie Foster"}],
    :updated_on "2014-08-21T21:48:35Z",
    :start_date "2014-08-19",
    :journals
@@ -168,11 +169,12 @@
                           "Kyle Whalen"
                           [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
                           "Sites should be able to manage their contact information"
+                          []
                           "Login card updated successfully. "
                           "http://redmine.visiontree.com/issues/8475#note-2"
                           "#2"
                           "2014-08-21T21:48:35Z")))
-       
+
     (fact "it converts an update to a status change"
       (convert-update status-update-issue-ex)
       =>
@@ -182,16 +184,16 @@
                             "Kyle Whalen"
                             [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
                             "Test related ticket"
+                            []
                             "13"
                             "18"
                             "QA Passed"
                             "http://redmine.visiontree.com/issues/8475#note-1"
                             "#1"
                             "2014-08-21T21:48:35Z"))
-      (provided (watchlist.web-api/get-issue-status-name-by-id "18") => "QA Passed"))
+      (provided (watchlist.web-api/get-issue-status-name-by-id nil nil "18") => "QA Passed"))
 
-    (fact "it converts an update to a hybrid status
-         update and a note update"
+    (fact "it converts an update to a hybrid status update and a note update"
       (convert-update status-and-note-update-issue-ex)
       =>
       (just (->NoteAndStatusUpdate 8475
@@ -200,6 +202,7 @@
                                    "Kyle Whalen"
                                    [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}] 
                                    "Sites should be able to manage their contact information"
+                                   [{:id 5, :name "Danny Armstrong"} {:id 6, :name "Jodie Foster"}]
                                    "Login card updated successfully. "
                                    "13"
                                    "18"
@@ -296,20 +299,41 @@
      (convert-update status-and-note-update-issue-ex))
    =>
    true)
+ (fact "is-a-watcher? will return true if the arg is a watcher"
+   (is-a-watcher?
+     5
+     (convert-update status-and-note-update-issue-ex))
+   =>
+   true)
+ (fact "is-a-watcher? will return false if the arg is not a watcher"
+   (is-a-watcher?
+     5
+     (convert-update note-update-issue-ex))
+   =>
+   false)
+; (fact "is-mentioned-in-ticket-or-update? will return true if the arg mentioned in note update"
+;   (is-mentioned-in-ticket-or-update?
+;     5
+;     (convert-update note-update-issue-ex))
+;   =>
+;   false)
  (fact "is-related-ticket? returns true if a ticket is related to this one"
    (is-related-ticket?
      5
      (convert-update status-and-note-update-issue-ex))
    =>
-   (contains {:related? true
-              :reason "relates"
-              :id 8329})
+  ; (contains {:related? true
+  ;            :reason "relates"
+  ;            :id 8329})
+   true
    (provided
-     (watchlist.web-api/issue 8329)
+     (watchlist.web-api/issue nil nil 8329)
      =>
      related-ticket-ex)
    (provided
      (watchlist.web-api/get-issue-status-name-by-id
+       nil
+       nil
        "18") => "QA Passed")))
 
 (facts "about update filter pipeline"
@@ -321,9 +345,9 @@
           (map
             convert-update
             [status-and-note-update-issue-ex])
-          '(:is-author? :is-assignee?))))
+          '(:im-the-author :im-the-assignee))))
     =>
-    (contains [:is-author? :is-assignee?] :in-any-order)))
+    (contains '(:im-the-author)  :in-any-order)))
     ;(provided
     ;  (watchlist.web-api/get-issue-status-name-by-id
     ;    "18") => "QA Passed")))

@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.core :refer :all]
             [clojure.string :refer [join split-lines trim]]
+            [clojure.edn :as edn]
             [seesaw.core :refer :all]
             [seesaw.color :refer :all]
             [seesaw.border :refer [empty-border]]
@@ -20,6 +21,38 @@
   (:import (java.awt Desktop)))
 
 (declare convert-update)
+(declare set-update-items-list-ui)
+(declare load-preferences)
+(declare in?)
+
+(def preferences-file-path
+  (let [dot-file ".watchlist-preferences"
+        home-dir (System/getProperty "user.home")
+        file-separator (System/getProperty "file.separator")
+        full-path (apply str (interpose file-separator [home-dir dot-file]))]
+    full-path))
+
+(def good-defaults
+  {:filter-options [:im-a-watcher
+                    :im-the-assignee
+                    :im-the-author]})
+
+(defn load-preferences
+  "return preferences from disk, or return default set"
+  []
+  (if (-> (io/file preferences-file-path) (.isFile))
+    (edn/read-string (slurp preferences-file-path))
+    good-defaults))
+
+(def preferences
+  (atom {}))
+(defn set-preferences
+  "Store to atom and persist to disk"
+  [prefs]
+  (reset! preferences prefs)
+  (spit
+    preferences-file-path
+    (pr-str prefs)))
 
 (def current-user (atom {:id nil :name nil})) 
 (defn set-current-user [id name]
@@ -28,26 +61,44 @@
 (def master-updates
   "The 'Model' that holds all updates to be rendered in view"
   (atom []))
-
 (defn set-master-updates [new-updates-list]
   (reset! master-updates new-updates-list))
 
-(def last-update-ts (atom (time-core/now)))
-
+; Initial call to deref this will return -4 days
+(def last-update-ts (atom (time-core/minus
+                            (time-core/now)
+                            (time-core/days 4))))
 (defn set-last-update-ts [ts]
   (reset! last-update-ts ts))
 
 (def fetching-updates (atom false))
-
 (defn set-fetching-updates [busy?]
   (reset! fetching-updates busy?))
 
-(def good-defaults
-  {:is-author? true
-   :is-assignee? true
-   :is-related-ticket? true})
+; Presume no connectivity until tested
+(def is-connectivity? (atom false))
+(defn set-is-connectivity? [state]
+  (reset! is-connectivity? state))
 
-(defn open-options-dialog [e]
+(defn ws-do
+  "Invoke webservice. f takes one arg being a map containing connection url and token"
+  [ws f]
+  (f ws))
+
+(defn check-connectivity []
+  (and
+    (get-in @preferences [:url])
+    (get-in @preferences [:api-token])
+    (ws-do @preferences (fn [ws]
+                          (api/http-any-response?
+                            (get-in ws [:url])
+                            6000)))
+    (ws-do @preferences (fn [ws]
+                          (api/valid-token?
+                            (get-in ws [:url])
+                            (get-in ws [:api-token]))))))
+
+(defn open-options-dialog [e options]
   (-> (dialog
         :content (mig-panel
                    :items [
@@ -60,10 +111,20 @@
                      [(label
                         :font (font :from (default-font "Label.font")
                                     :style :bold)
+                        :text "Redmine URL")
+                      "gaptop 5, wrap"]
+                     [(text :columns 20
+                            :id :url
+                            :text (-> options :url))
+                      "wrap"]
+                     [(label
+                        :font (font :from (default-font "Label.font")
+                                    :style :bold)
                         :text "Redmine API Key")
                       "gaptop 5, wrap"]
                      [(text :columns 20
-                            :id :redmine-api-key)
+                            :id :api-token
+                            :text (-> options :api-token))
                       "wrap"]
                      [(label
                         :font (font :from (default-font "Label.font")
@@ -71,34 +132,70 @@
                         :text "Show me updates for tickets where ...")
                       "gaptop 5, wrap"]
                      [(checkbox :text "I'm the assignee"
-                                :id :im-the-assignee)
+                                :id :im-the-assignee
+                                :selected? (-> options :filter-options (in? :im-the-assignee)))
                       "wrap"]
                      [(checkbox :text "I'm a watcher"
-                                :id :im-a-watcher)
+                                :id :im-a-watcher
+                                :selected? (-> options :filter-options (in? :im-a-watcher)))
                       "wrap"]
                      [(checkbox :text "I'm the author"
-                                :id :im-the-author)
+                                :id :im-the-author
+                                :selected? (-> options :filter-options (in? :im-the-author)))
                       "wrap"]
                      [(checkbox :text "The ticket is related to one of my assigned tickets"
-                                :id :related-ticket)
+                                :id :related-ticket
+                                :selected? (-> options :filter-options (in? :related-ticket)))
                       "wrap"]
                      [(checkbox :text "I've participated in the ticket updates"
-                                :id :participated-in-updates)
+                                :id :participated-in-updates
+                                :selected? (-> options :filter-options (in? :participated-in-updates)))
                       "wrap"]
-                     [(checkbox :text "I'm mentioned in the ticket or in an update to the ticket"
-                                :id :mentioned-in-updates)
-                      "wrap"]
+                    ; [(checkbox :text "I'm mentioned in the ticket or in an update to the ticket"
+                    ;            :id :mentioned-in-updates
+                    ;            :selected? (-> options :filter-options (in? :mentioned-in-updates)))
+                    ;  "wrap"]
                      ])
          :parent (to-widget e)
          :option-type :ok-cancel
          :success-fn (fn [p]
-                       {:api-key (config
-                                   (select
-                                     (to-frame p)
-                                     [:#redmine-api-key])
-                                   :text)})
+                       {:api-token (config
+                                           (select
+                                             (to-frame p)
+                                             [:#api-token])
+                                           :text)
+                        :url (config
+                                       (select
+                                         (to-frame p)
+                                         [:#url])
+                                         :text)
+                        :filter-options [
+                                         (if (selection (select
+                                                           (to-frame p)
+                                                             [:#im-a-watcher]))
+                                           :im-a-watcher)
+                                         (if (selection (select
+                                                           (to-frame p)
+                                                             [:#im-the-assignee]))
+                                           :im-the-assignee)
+                                         (if (selection (select
+                                                           (to-frame p)
+                                                             [:#im-the-author]))
+                                           :im-the-author)
+                                         (if (selection (select
+                                                           (to-frame p)
+                                                             [:#related-ticket]))
+                                           :related-ticket)
+                                         (if (selection (select
+                                                           (to-frame p)
+                                                             [:#participated-in-updates]))
+                                           :participated-in-updates)
+                                       ;  (if (selection (select
+                                       ;                    (to-frame p)
+                                       ;                      [:#mentioned-in-updates]))
+                                       ;    :mentioned-in-updates)
+                                         ]})
          :cancel-fn (fn [p] nil))
-    
     pack! show!))
 
 (defn frame-content []
@@ -128,13 +225,25 @@
                                   :visible? false
                                   :id :fetching-indicator
                                   :busy? true)])
-                                   
+
                 :east (action :name ""
                               :icon (io/resource
                                       "gear.png")
                               :handler (fn [e]
-                                         (alert
-                                           (str (open-options-dialog e))))))))
+                                         (if-let [options (open-options-dialog
+                                                            e
+                                                            @preferences)]
+                                           (do
+                                             ; write out preferences to file and
+                                             ; global ref
+                                             (set-preferences options)
+                                             ; recheck connectivity and do query if connected
+                                             (if (not @is-connectivity?)
+                                               (set-is-connectivity?
+                                                 (check-connectivity)))
+                                             (if @is-connectivity?
+                                               (set-update-items-list-ui
+                                                 @last-update-ts)))))))))
 
 (defn contains-every? [m keyseqs]
   (let [not-found (Object.)]
@@ -175,26 +284,73 @@
    a ticket assigned to me or authored by me"
   [user-id update-record]
   (let [related-tickets (-> update-record :relations)]
-    (reduce
-      (fn [accum val]
-        (let [maybe-related-issue (api/issue (-> val :issue_id))]
-          (if
-            (and
-              (is-assignee? user-id (convert-update maybe-related-issue))
-              (is-author? user-id (convert-update maybe-related-issue)))
-            (conj accum
-              {:related? true
-               :reason (:relation_type val)
-               :id (:issue_id val)})
-            accum)))
-      []
-      related-tickets)))
+    (not (empty? (reduce
+                   (fn [accum val]
+                     (let [maybe-related-issue (ws-do
+                                                 @preferences
+                                                 (fn [ws]
+                                                   (api/issue
+                                                     (-> ws :url)
+                                                     (-> ws :api-token)
+                                                     (-> val :issue_id))))
+                           converted-maybe-update (convert-update maybe-related-issue)]
+                       (if
+                         (and
+                           (is-assignee? user-id converted-maybe-update)
+                           (is-author? user-id converted-maybe-update))
+                         (conj accum
+                           {:related? true
+                            :reason (:relation_type val)
+                            :id (:issue_id val)})
+                         accum)))
+                   []
+                   related-tickets)))))
 
-(defn in? 
+(defn is-a-watcher? [user-id update-record]
+  (not (nil? (first
+               (filter
+                 (fn [item]
+                   (= (-> item :id) user-id))
+                 (:watchers update-record))))))
+
+(defn is-a-update-participant?
+  "Determine if user authored any updates to ticket"
+  [user-id update-record]
+  (first
+    (filter
+      (fn [item]
+        (= (-> item :user :id) user-id))
+      (:journals update-record))))
+
+(defn is-mentioned-in-ticket-or-update?
+  "Determine if user was mentioned by any other user in any updates to ticket.
+   Requires user info like first and last name and email to search for ident-options strings
+   like @darmstrong, or darmstrong or Danny Armstrong or Danny, if configured"
+  [ident-options update-record]
+  (or (reduce
+        (fn [accum item]
+          (and
+            accum
+            (not (nil?
+                   (re-find (re-pattern
+                              (str "(?i)" item))
+                     (-> update-record :description))))))
+        false
+        ident-options)
+      (not (nil? (first
+                   (filter
+                     (fn [item]
+                       (reduce
+                         (fn [accum elem]
+                           (re-find (-> item :notes) elem)))
+                         ident-options)
+                     (:journals update-record)))))))
+
+(defn in?
   "true if seq contains elm"
-  [seq elm]  
+  [seq elm]
   (some #(= elm %) seq))
-  
+
 (defn tag-updates
   "For each update in update-list, run preds (resolve keyword
    to real func first) and collect results."
@@ -203,18 +359,29 @@
     (fn [update]
       [update (cond
                 (and
-                  (in? pred-syms :is-author?)
+                  (in? pred-syms :im-the-author)
                   (is-author? user-id update))
-                '(:is-author)
+                '(:im-the-author)
                 (and
-                  (in? pred-syms :is-assignee?)
+                  (in? pred-syms :im-the-assignee)
                   (is-assignee? user-id update))
-                '(:is-assignee?)
+                '(:im-the-assignee)
                 (and
-                  (in? pred-syms :is-related-ticket?)
+                  (in? pred-syms :im-a-watcher)
+                  (is-a-watcher? user-id update))
+                '(:im-a-watcher)
+                (and
+                  (in? pred-syms :participated-in-updates)
+                  (is-a-update-participant? user-id update))
+                '(:participated-in-updates)
+               ; (and
+               ;   (in? pred-syms :is-mentioned-in-ticket-or-update)
+               ;   (is-mentioned-in-ticket-or-update? user-id update))
+               ; '(:is-mentioned-in-ticket-or-update)
+                (and
+                  (in? pred-syms :related-ticket)
                   (is-related-ticket? user-id update))
-                '(:is-related-ticket?)
-
+                '(:related-ticket)
                 :else '())])
     update-list))
 
@@ -224,6 +391,7 @@
                        update-author
                        relations
                        subject
+                       watchers
                        update-text
                        update-uri
                        update-uri-label
@@ -234,6 +402,7 @@
                          update-author
                          relations
                          subject
+                         watchers
                          old-status
                          new-status
                          new-status-label
@@ -246,6 +415,7 @@
                                 update-author
                                 relations
                                 subject
+                                watchers
                                 update-text
                                 old-status
                                 new-status
@@ -261,6 +431,7 @@
         subject (-> issue :subject)
         assignee-id (-> issue :assigned_to :id)
         ticket-author-id (-> issue :author :id)
+        watchers (-> issue :watchers)
         update-rank (count (-> issue :journals))
         update-uri (str "http://redmine.visiontree.com/issues/"
                         issue-id
@@ -285,6 +456,7 @@
                               update-author
                               relations
                               subject
+                              watchers
                               update-text
                               old-status
                               new-status
@@ -299,13 +471,20 @@
             update-author (-> last-journal-entry :user :name)
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)
-            new-status-label (api/get-issue-status-name-by-id new-status)]
+            new-status-label (ws-do
+                               @preferences
+                               (fn [ws]
+                                 (api/get-issue-status-name-by-id
+                                   (get-in ws [:url])
+                                   (get-in ws [:api-token])
+                                   new-status)))]
         (StatusUpdate. issue-id
                        assignee-id
                        ticket-author-id
                        update-author
                        relations
                        subject
+                       watchers
                        old-status
                        new-status
                        new-status-label
@@ -328,6 +507,7 @@
                      update-author
                      relations
                      subject
+                     watchers
                      update-text
                      update-uri
                      update-uri-label
@@ -375,7 +555,9 @@
                              (time-local/to-local-date-time
                                (:updated-at record)))
                            " by "
-                           (:update-author record)))
+                           (:update-author record)
+                           " "
+                           tags))
              t (seesaw.timer/timer (fn [_]
                                      (config!
                                        l
@@ -412,9 +594,20 @@
     #(not (nil? %))
     (mapv
       #(convert-update
-         (api/issue
-           (get-in % [:id])))
-      (api/get-updated-issues from-ts))))
+         (ws-do
+           @preferences
+           (fn [ws]
+             (api/issue
+               (get-in ws [:url])
+               (get-in ws [:api-token])
+               (get-in % [:id])))))
+      (ws-do
+        @preferences
+        (fn [ws]
+          (api/get-updated-issues
+            (get-in ws [:url])
+            (get-in ws [:api-token])
+            from-ts))))))
 
 (defn merge-updates
   "Take old-list of updates and merge new-list by
@@ -433,12 +626,6 @@
                             old-list)]
     (into new-list filtered-old-list)))
 
-(defn load-preferences
-  "Load preferences from disk, or load default set"
-  [good-defaults]
-  ;doesn't do anything yet
-  )
-
 (def watchlist-frame
   (frame
     :title "WatchList"
@@ -446,6 +633,10 @@
     :content (frame-content)
     :size [500 :by 700]
     :minimum-size [500 :by 500]))
+
+(defn is-tagged-item?
+  [item]
+  (not (empty? (second item))))
 
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
@@ -462,11 +653,9 @@
           tagged-items (tag-updates
                          (:id @current-user)
                          merged-items
-                         ;TODO replace this with preference loaded var
-                         '(:is-author? :is-assignee?))
+                         (-> @preferences :filter-options))
           filtered-items (filterv
-                           (fn [item]
-                             (not (empty? (second item))))
+                           is-tagged-item?
                            tagged-items)
           built-items (mapv
                         build-update-row
@@ -480,9 +669,28 @@
           :items built-items))
       (set-fetching-updates false))))
 
+(defn query-and-set-current-user []
+  (let [u (ws-do @preferences
+                 (fn [ws]
+                   (api/current-user (get-in ws [:url])
+                                     (get-in ws [:api-token]))))]
+    (set-current-user
+      (get-in u [:user :id])
+      (str (get-in u [:user :firstname])
+           " "
+           (get-in u [:user :lastname])))))
+
 (defn start-app []
-  (api/load-token)
   (native!)
+  (set-preferences (load-preferences))
+  (add-watch
+    is-connectivity?
+    :connectivity-watch
+    (fn [k r old-state new-state]
+      (when new-state
+        (query-and-set-current-user))))
+  (set-is-connectivity?
+    (check-connectivity))
   (-> watchlist-frame pack! show!)
   (config! watchlist-frame :content (frame-content))
   (bind/bind
@@ -491,19 +699,12 @@
       (select watchlist-frame [:#fetching-indicator]) :visible?))
   (listen (select watchlist-frame [:#check-now])
     :mouse-clicked (fn [evt-source]
-                     (set-update-items-list-ui @last-update-ts)
-                     (scroll!
-                       (select
-                         watchlist-frame
-                         [:#updates-panel])
-                       :to :top)))
-  (let [u (api/current-user (api/get-token))]
-    (set-current-user
-      (get-in u [:user :id])
-      (str (get-in u [:user :firstname])
-           " "
-           (get-in u [:user :lastname]))))
-  (load-preferences good-defaults)
-  (set-update-items-list-ui (time-core/minus
-                              (time-core/now)
-                              (time-core/days 2))))
+                     (if @is-connectivity?
+                       (do
+                         (set-update-items-list-ui @last-update-ts)
+                         (scroll!
+                           (select
+                             watchlist-frame
+                             [:#updates-panel])
+                           :to :top))
+                       (alert "No connectivity")))))
