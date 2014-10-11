@@ -525,7 +525,7 @@
     ", "
     (format-time-ago
       updated-at)))
-  
+
 (defn build-update-row [[record tags]]
   (mig-panel 
     :border [(empty-border :thickness 0)]
