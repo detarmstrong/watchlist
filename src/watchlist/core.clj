@@ -258,19 +258,21 @@
   "Return formatted string indicating the time delta between
    now in utc and from-time"
   [from-time]
-  (let [delta (time-core/interval from-time (time-core/now))
-        delta-years (time-core/in-years delta)
-        delta-days (time-core/in-days delta)
-        delta-hours (time-core/in-hours delta)
-        delta-minutes (time-core/in-minutes delta)
-        delta-seconds (time-core/in-seconds delta)]
-    (cond
-      (>= delta-years 1) (str delta-years "y")
-      (>= delta-days 30) (str (/ delta-days 30) "mon")
-      (>= delta-days 1) (str delta-days "d")
-      (>= delta-hours 1) (str delta-hours "h")
-      (>= delta-minutes 1) (str delta-minutes "m")
-      :else (str delta-seconds "s"))))
+  (str
+    (let [delta (time-core/interval from-time (time-core/now))
+          delta-years (time-core/in-years delta)
+          delta-days (time-core/in-days delta)
+          delta-hours (time-core/in-hours delta)
+          delta-minutes (time-core/in-minutes delta)
+          delta-seconds (time-core/in-seconds delta)]
+      (cond
+        (>= delta-years 1) (str delta-years "y")
+        (>= delta-days 30) (str (/ delta-days 30) "mon")
+        (>= delta-days 1) (str delta-days "d")
+        (>= delta-hours 1) (str delta-hours "h")
+        (>= delta-minutes 1) (str delta-minutes "m")
+        :else (str delta-seconds "s")))
+    " ago"))
 
 ;predicates for filtering updates
 (defn is-assignee?
@@ -548,9 +550,10 @@
       [(let [parsed-updated-at (time-format/parse (:updated-at record))
              initial-delay (- 60 (time-core/second parsed-updated-at))
              l (label
-                 :text (make-label-text
-                         (:update-author record)
-                         parsed-updated-at)
+                 :text (first
+                         (clojure.string/split
+                           (:update-author record)
+                           #"\s"))
                  :tip (str "Updated at "
                            (time-format/unparse 
                              (time-format/formatter-local
@@ -560,17 +563,7 @@
                            " by "
                            (:update-author record)
                            " "
-                           tags))
-             t (seesaw.timer/timer (fn [_]
-                                     (config!
-                                       l
-                                       :text
-                                       (make-label-text
-                                         (:update-author record)
-                                         parsed-updated-at))
-                                     -1)
-                                     :delay 60000
-                                     :initial-delay initial-delay)]
+                           tags))]
          l)
        ""]
       [(text
@@ -589,7 +582,31 @@
         :wrap-lines? true
         :background (color "#f9f9f9")
         :margin 5)
-      "span 2 2, gap 8, growx, w 240:400:700"]]))
+      "span 2 2, gap 8, growx, w 240:400:700, wrap"]
+      [(let [parsed-updated-at (time-format/parse (:updated-at record))
+             initial-delay (- 60 (time-core/second parsed-updated-at))
+             l (label
+                 :text (format-time-ago parsed-updated-at)
+                 :tip (str "Updated at "
+                           (time-format/unparse 
+                             (time-format/formatter-local
+                               "MM/dd/yyyy hh:mm:ssa")
+                             (time-local/to-local-date-time
+                               (:updated-at record)))
+                           " by "
+                           (:update-author record)
+                           " "
+                           tags))
+             t (seesaw.timer/timer (fn [_]
+                                     (config!
+                                       l
+                                       :text
+                                       (format-time-ago parsed-updated-at))
+                                     -1)
+                                     :delay 60000
+                                     :initial-delay initial-delay)]
+         l)
+       ""]]))
 
 (defn get-issue-updates
   "Iterate issue updates and convert to intermediate representation
