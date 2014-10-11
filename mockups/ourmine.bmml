@@ -1,14 +1,14 @@
 <mockup version="1.0" skin="wireframe" fontFace="Balsamiq Sans" measuredW="1789" measuredH="693" mockupW="1744" mockupH="679">
   <controls>
-    <control controlID="0" controlTypeID="com.balsamiq.mockups::TitleWindow" x="447" y="48" w="528" h="645" measuredW="450" measuredH="400" zOrder="0" locked="true" isInGroup="-1">
+    <control controlID="0" controlTypeID="com.balsamiq.mockups::TitleWindow" x="447" y="48" w="528" h="645" measuredW="450" measuredH="400" zOrder="0" locked="false" isInGroup="-1">
       <controlProperties>
         <bottomheight>0</bottomheight>
-        <text>WatchList</text>
+        <text>WatchList%20-%20_Offline_</text>
       </controlProperties>
     </control>
-    <control controlID="2" controlTypeID="com.balsamiq.mockups::Label" x="456" y="143" w="-1" h="-1" measuredW="55" measuredH="21" zOrder="1" locked="false" isInGroup="-1">
+    <control controlID="2" controlTypeID="com.balsamiq.mockups::Label" x="456" y="143" w="-1" h="-1" measuredW="21" measuredH="21" zOrder="1" locked="false" isInGroup="-1">
       <controlProperties>
-        <text>Jon%2C%2030m</text>
+        <text>Jon</text>
       </controlProperties>
     </control>
     <control controlID="3" controlTypeID="com.balsamiq.mockups::Label" x="456" y="118" w="-1" h="-1" measuredW="333" measuredH="21" zOrder="2" locked="false" isInGroup="-1">
@@ -74,7 +74,7 @@
         <text>Pull%20down%20here%20to%20see%20further%20back%20in%20history</text>
       </controlProperties>
     </control>
-    <control controlID="33" controlTypeID="com.balsamiq.mockups::Label" x="929" y="118" w="-1" h="-1" measuredW="22" measuredH="21" zOrder="15" locked="false" isInGroup="-1">
+    <control controlID="33" controlTypeID="com.balsamiq.mockups::Label" x="925" y="142" w="-1" h="-1" measuredW="22" measuredH="21" zOrder="15" locked="false" isInGroup="-1">
       <controlProperties>
         <color>10066329</color>
         <text>%2313</text>
@@ -108,7 +108,7 @@
         <color>14540253</color>
       </controlProperties>
     </control>
-    <control controlID="63" controlTypeID="__group__" x="456" y="201" w="249" h="22" measuredW="249" measuredH="22" zOrder="21" locked="false" isInGroup="-1">
+    <control controlID="63" controlTypeID="__group__" x="456" y="188" w="249" h="22" measuredW="249" measuredH="22" zOrder="21" locked="false" isInGroup="-1">
       <groupChildrenDescriptors>
         <control controlID="0" controlTypeID="com.balsamiq.mockups::Label" x="0" y="1" w="-1" h="-1" measuredW="236" measuredH="21" zOrder="0" locked="false" isInGroup="63">
           <controlProperties>
@@ -133,7 +133,7 @@
       <groupChildrenDescriptors>
         <control controlID="0" controlTypeID="com.balsamiq.mockups::CheckBoxGroup" x="0" y="27" w="-1" h="-1" measuredW="760" measuredH="127" zOrder="0" locked="false" isInGroup="67">
           <controlProperties>
-            <text>%5Bx%5D%20I%27m%20the%20assignee%0A%5Bx%5D%20I%27m%20a%20watcher%0A%5Bx%5D%20I%27m%20the%20author%0A%5Bx%5D%20The%20ticket%20is%20related%20to%20any%20of%20my%20assigned%20tasks%20%28eg%20is%20blocked%20by%20or%20is%20sibling%20or%20child%20or%20parent%20of%20a%20ticket%20I%27m%20assigned%20etc%29%0A%5Bx%5D%20I%27m%20written%20an%20update%20to%20the%20ticket%0A%5Bx%5D%20I%27m%20mentioned%20in%20the%20ticket%20or%20an%20update%20to%20the%20ticket%20%28eg%20@darmstrong%20Here%27s%20the%20thing...%29</text>
+            <text>%5Bx%5D%20I%27m%20the%20assignee%0A%5Bx%5D%20I%27m%20a%20watcher%0A%5Bx%5D%20I%27m%20the%20author%0A%5Bx%5D%20The%20ticket%20is%20related%20to%20any%20of%20my%20assigned%20tasks%20%28eg%20is%20blocked%20by%20or%20is%20sibling%20or%20child%20or%20parent%20of%20a%20ticket%20I%27m%20assigned%20etc%29%0A%5Bx%5D%20I%27ve%20written%20an%20update%20to%20the%20ticket%0A%5Bx%5D%20The%20project%20is%3A</text>
           </controlProperties>
         </control>
         <control controlID="1" controlTypeID="com.balsamiq.mockups::Label" x="0" y="0" w="-1" h="-1" measuredW="228" measuredH="21" zOrder="1" locked="false" isInGroup="67">
@@ -144,12 +144,12 @@
         </control>
       </groupChildrenDescriptors>
     </control>
-    <control controlID="68" controlTypeID="com.balsamiq.mockups::Button" x="1029" y="476" w="-1" h="-1" measuredW="51" measuredH="24" zOrder="26" locked="false" isInGroup="-1">
+    <control controlID="68" controlTypeID="com.balsamiq.mockups::Button" x="1029" y="487" w="-1" h="-1" measuredW="51" measuredH="24" zOrder="26" locked="false" isInGroup="-1">
       <controlProperties>
         <text>Save</text>
       </controlProperties>
     </control>
-    <control controlID="69" controlTypeID="com.balsamiq.mockups::Button" x="1093" y="476" w="-1" h="-1" measuredW="63" measuredH="24" zOrder="27" locked="false" isInGroup="-1">
+    <control controlID="69" controlTypeID="com.balsamiq.mockups::Button" x="1093" y="487" w="-1" h="-1" measuredW="63" measuredH="24" zOrder="27" locked="false" isInGroup="-1">
       <controlProperties>
         <text>Cancel</text>
       </controlProperties>
@@ -159,13 +159,13 @@
         <text>Use%20j/k%20to%20step%20up%20and%20down%20through%20selection%20of%20ticket.%20Selected%20and%20then%20deselected%20tickets%20are%20%22read%22</text>
       </controlProperties>
     </control>
-    <control controlID="71" controlTypeID="com.balsamiq.mockups::Label" x="456" y="160" w="-1" h="-1" measuredW="50" measuredH="21" zOrder="29" locked="false" isInGroup="-1">
+    <control controlID="71" controlTypeID="com.balsamiq.mockups::Label" x="306" y="200" w="-1" h="-1" measuredW="50" measuredH="21" zOrder="29" locked="false" isInGroup="-1">
       <controlProperties>
         <color>13576743</color>
         <text>%28Urgent%29</text>
       </controlProperties>
     </control>
-    <control controlID="72" controlTypeID="__group__" x="692" y="177" w="39" h="23" measuredW="39" measuredH="23" zOrder="24" locked="false" isInGroup="-1">
+    <control controlID="72" controlTypeID="__group__" x="343" y="268" w="39" h="23" measuredW="39" measuredH="23" zOrder="24" locked="false" isInGroup="-1">
       <groupChildrenDescriptors>
         <control controlID="0" controlTypeID="com.balsamiq.mockups::HRule" x="0" y="13" w="39" h="-1" measuredW="100" measuredH="10" zOrder="0" locked="false" isInGroup="72"/>
         <control controlID="1" controlTypeID="com.balsamiq.mockups::Label" x="9" y="0" w="-1" h="-1" measuredW="20" measuredH="21" zOrder="1" locked="false" isInGroup="72">
@@ -233,7 +233,7 @@
         </control>
       </groupChildrenDescriptors>
     </control>
-    <control controlID="81" controlTypeID="__group__" x="448" y="230" w="511" h="73" measuredW="511" measuredH="73" zOrder="16" locked="false" isInGroup="-1">
+    <control controlID="81" controlTypeID="__group__" x="448" y="222" w="511" h="73" measuredW="511" measuredH="73" zOrder="16" locked="false" isInGroup="-1">
       <groupChildrenDescriptors>
         <control controlID="0" controlTypeID="com.balsamiq.mockups::Label" x="8" y="28" w="-1" h="-1" measuredW="68" measuredH="21" zOrder="0" locked="false" isInGroup="81">
           <controlProperties>
@@ -307,6 +307,34 @@
     <control controlID="89" controlTypeID="com.balsamiq.mockups::Icon" x="1322" y="160" w="-1" h="-1" measuredW="24" measuredH="24" zOrder="42" locked="false" isInGroup="-1">
       <controlProperties>
         <icon>CheckMarkIcon%7Csmall</icon>
+      </controlProperties>
+    </control>
+    <control controlID="92" controlTypeID="com.balsamiq.mockups::List" x="1139" y="389" w="111" h="71" measuredW="100" measuredH="126" zOrder="43" locked="false" isInGroup="-1">
+      <controlProperties>
+        <borderStyle>none</borderStyle>
+        <selectedIndex>1</selectedIndex>
+        <verticalScrollbar>true</verticalScrollbar>
+      </controlProperties>
+    </control>
+    <control controlID="93" controlTypeID="com.balsamiq.mockups::Label" x="1029" y="610" w="-1" h="-1" measuredW="537" measuredH="21" zOrder="44" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>%5Bx%5D%20I%27m%20mentioned%20in%20the%20ticket%20or%20an%20update%20to%20the%20ticket%20%28eg%20@darmstrong%20Here%27s%20the%20thing...%29</text>
+      </controlProperties>
+    </control>
+    <control controlID="94" controlTypeID="com.balsamiq.mockups::Label" x="1029" y="589" w="-1" h="-1" measuredW="132" measuredH="21" zOrder="45" locked="false" isInGroup="-1">
+      <controlProperties>
+        <bold>true</bold>
+        <text>Alternate%20filter%20ideas</text>
+      </controlProperties>
+    </control>
+    <control controlID="95" controlTypeID="com.balsamiq.mockups::Label" x="456" y="161" w="-1" h="-1" measuredW="52" measuredH="21" zOrder="46" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>30m%20ago</text>
+      </controlProperties>
+    </control>
+    <control controlID="96" controlTypeID="com.balsamiq.mockups::Icon" x="932" y="124" w="-1" h="-1" measuredW="16" measuredH="16" zOrder="47" locked="false" isInGroup="-1">
+      <controlProperties>
+        <icon>UpDownFillTriangleIcon%7Cxsmall</icon>
       </controlProperties>
     </control>
   </controls>
