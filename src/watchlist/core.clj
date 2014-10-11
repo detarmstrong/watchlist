@@ -64,10 +64,10 @@
 (defn set-master-updates [new-updates-list]
   (reset! master-updates new-updates-list))
 
-; Initial call to deref this will return -4 days
-(def last-update-ts (atom (time-core/minus
-                            (time-core/now)
-                            (time-core/days 4))))
+(def default-days-ago (time-core/minus
+                        (time-core/now)
+                        (time-core/days 2)))
+(def last-update-ts (atom default-days-ago))
 (defn set-last-update-ts [ts]
   (reset! last-update-ts ts))
 
@@ -233,10 +233,12 @@
                                          (if-let [options (open-options-dialog
                                                             e
                                                             @preferences)]
-                                           (do
+                                           (let [prefs-changed? (not (= @preferences options))]
                                              ; write out preferences to file and
                                              ; global ref
                                              (set-preferences options)
+                                             (if prefs-changed?
+                                               (set-last-update-ts default-days-ago))
                                              ; recheck connectivity and do query if connected
                                              (if (not @is-connectivity?)
                                                (set-is-connectivity?
