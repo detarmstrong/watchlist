@@ -530,7 +530,7 @@
   (mig-panel 
     :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["ins 10", "[][grow][]", "[top]"]
+    :constraints ["ins 10", "[60:80:120][grow][]", "[top]"]
     :items [
       [(label :text (str "#"
                          (:id record)
@@ -586,9 +586,9 @@
         :multi-line? true
         :editable? false
         :wrap-lines? true
-        :background (color "#eeeeee")
+        :background (color "#f9f9f9")
         :margin 5)
-      "span 2 2, gap 8, growx, growy, w 240:400:700"]]))
+      "span 2 2, gap 8, growx, w 240:400:700"]]))
 
 (defn get-issue-updates
   "Iterate issue updates and convert to intermediate representation
@@ -636,7 +636,7 @@
     :on-close :exit
     :content (frame-content)
     :size [500 :by 700]
-    :minimum-size [500 :by 500]))
+    :minimum-size [530 :by 700]))
 
 (defn is-tagged-item?
   [item]
@@ -666,11 +666,19 @@
                         filtered-items)]
       (set-master-updates filtered-items)
       (invoke-later
-        (seesaw.core/config!
-          (seesaw.core/select
+        (config!
+          (select
             watchlist-frame
             [:#updates-panel])
           :items built-items))
+      ; terrible hack to get the damn ui to correct itself
+      ; after reloading the items. maybe try
+      ; recreating the initial state which doesn't fuck up
+      (seesaw.timer/timer
+        (fn [e]
+          (-> (select watchlist-frame [:#updates-panel]) (.revalidate)))
+        :initial-delay 10
+        :repeats? false)
       (set-fetching-updates false))))
 
 (defn query-and-set-current-user []
