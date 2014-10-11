@@ -544,7 +544,9 @@
       ; Hack to get the text to set. :text on hyperlink did not work
       [(config! (hyperlink
                   :uri (:update-uri record)
-                  :tip "Open in browser")
+                  :tip (str "Open update "
+                            (:update-uri-label record)
+                            " in browser"))
                 :text (:update-uri-label record))
        "wrap"]
       [(let [parsed-updated-at (time-format/parse (:updated-at record))
