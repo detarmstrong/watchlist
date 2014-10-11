@@ -533,7 +533,7 @@
   (mig-panel 
     :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["ins 10", "[60:80:120][grow][]", "[top]"]
+    :constraints ["ins 10", "[60:60:120][grow][]", "[top]"]
     :items [
       [(label :text (str "#"
                          (:id record)
