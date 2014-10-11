@@ -570,17 +570,19 @@
                                      -1)
                                      :delay 60000
                                      :initial-delay initial-delay)]
-         l)]
-      [(text :text (str (cond
-                          (or (instance? NoteUpdate record)
-                              (instance? NoteAndStatusUpdate record))
-                          (:update-text record)
-                          (or (instance? NoteAndStatusUpdate record)
-                              (instance? StatusUpdate record))
-                          (str (if (instance? NoteAndStatusUpdate record)
-                                 "\n")
-                               "Status set to: "
-                               (:new-status-label record))))
+         l)
+       ""]
+      [(text
+         :text (str (cond
+                      (or (instance? NoteUpdate record)
+                          (instance? NoteAndStatusUpdate record))
+                      (:update-text record)
+                      (or (instance? NoteAndStatusUpdate record)
+                          (instance? StatusUpdate record))
+                      (str (if (instance? NoteAndStatusUpdate record)
+                             "\n")
+                           "Status set to: "
+                           (:new-status-label record))))
         :multi-line? true
         :editable? false
         :wrap-lines? true
