@@ -230,31 +230,31 @@
        (fact "intervals a year ago or greater show 14y"
              (format-time-ago (time-core/date-time 2000 1 1))
              =>
-             "14y")
+             "14y ago")
        (fact "intervals a day ago show 2d"
              (format-time-ago (time-core/minus
                                 (time-core/now)
                                 (time-core/days 2)))
              =>
-             "2d")
+             "2d ago")
        (fact "intervals a hour ago show 2h"
              (format-time-ago (time-core/minus
                                 (time-core/now)
                                 (time-core/hours 2)))
              =>
-             "2h")
+             "2h ago")
        (fact "intervals less than a hour ago show 15m"
              (format-time-ago (time-core/minus
                                 (time-core/now)
                                 (time-core/minutes 15)))
              =>
-             "15m")
+             "15m ago")
        (fact "intervals less than a minute ago show 30s"
              (format-time-ago (time-core/minus
                                 (time-core/now)
                                 (time-core/seconds 30)))
              =>
-             "30s"))
+             "30s ago"))
 
 (facts "about merge-updates"
   (fact "it places newer updates by id at the head. assumes items already 

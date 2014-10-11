@@ -92,7 +92,7 @@
     (ws-do @preferences (fn [ws]
                           (api/http-any-response?
                             (get-in ws [:url])
-                            6000)))
+                            12000)))
     (ws-do @preferences (fn [ws]
                           (api/valid-token?
                             (get-in ws [:url])
