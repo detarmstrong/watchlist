@@ -113,7 +113,7 @@
                                     :style :bold)
                         :text "Redmine URL")
                       "gaptop 5, wrap"]
-                     [(text :columns 20
+                     [(text :columns 26
                             :id :url
                             :text (-> options :url))
                       "wrap"]
@@ -122,7 +122,7 @@
                                     :style :bold)
                         :text "Redmine API Key")
                       "gaptop 5, wrap"]
-                     [(text :columns 20
+                     [(text :columns 26
                             :id :api-token
                             :text (-> options :api-token))
                       "wrap"]
@@ -145,7 +145,8 @@
                       "wrap"]
                      [(checkbox :text "The ticket is related to one of my assigned tickets"
                                 :id :related-ticket
-                                :selected? (-> options :filter-options (in? :related-ticket)))
+                                :selected? (-> options :filter-options (in? :related-ticket))
+                                :tip "For example, the ticket is blocked by or precedes one of my tickets")
                       "wrap"]
                      [(checkbox :text "I've participated in the ticket updates"
                                 :id :participated-in-updates
