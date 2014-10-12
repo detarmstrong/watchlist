@@ -533,7 +533,7 @@
   (mig-panel 
     :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["ins 10", "[60:60:120][grow][]", "[top]"]
+    :constraints ["ins 10", "[][grow][]", "[top]"]
     :items [
       [(label :text (str "#"
                          (:id record)
@@ -549,9 +549,7 @@
                             " in browser"))
                 :text (:update-uri-label record))
        "wrap"]
-      [(let [parsed-updated-at (time-format/parse (:updated-at record))
-             initial-delay (- 60 (time-core/second parsed-updated-at))
-             l (label
+      [(label
                  :text (first
                          (clojure.string/split
                            (:update-author record)
@@ -565,9 +563,8 @@
                            " by "
                            (:update-author record)
                            " "
-                           tags))]
-         l)
-       ""]
+                           tags))
+       "growx, w 40:54:100"]
       [(text
          :text (str (cond
                       (or (instance? NoteUpdate record)
