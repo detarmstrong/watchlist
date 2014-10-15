@@ -25,3 +25,48 @@
               "this\n  is\n  the\n    line"
               (do "preserve whitespace" false))
             => "//this\n//  is\n//  the\n//    line"))
+
+(facts "about index-of-difference"
+  (fact "it returns index of difference given two strings"
+    (index-of-difference "Chacho" "Cholo")
+    =>
+    2)
+  (fact "it returns index of difference given two strings"
+    (index-of-difference "Jon Jules" "Jon Julesa")
+    =>
+    9)
+  (fact "it returns index of difference given two strings, one empty"
+    (index-of-difference "" "Cholo")
+    =>
+    0))
+
+(facts "about shortest-unique-string"
+  (fact "it returns the shortest unique string"
+    (shortest-unique-strings
+      #(let [space-idx (-> % (.indexOf " "))]
+         (if (not (neg? space-idx))
+           space-idx
+           (count %)))
+      '("Jon Joy"
+        "Jon Joy"
+        "Jon Jules"
+        "Jon Julesa"
+        "Jon Mew"
+        "Pokie"
+        "Perki"
+        "Lerke"
+        "Paul Shake"
+        "Paul Punch"
+        "Madz Hience"))
+    =>
+    '("Jon Jo"
+      "Jon Jo"
+      "Jon Jules"
+      "Jon Julesa"
+      "Jon M"
+      "Pokie"
+      "Perki"
+      "Lerke"
+      "Paul S"
+      "Paul P"
+      "Madz")))
