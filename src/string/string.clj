@@ -64,9 +64,8 @@
                           strings)
             preferred-min (pref-len string)]
         (cond
-          (neg? (compare max-diff-at preferred-min))
-          (subs string 0 preferred-min)
-          (= 0 max-diff-at)
+          (or (neg? (compare max-diff-at preferred-min))
+              (= 0 max-diff-at))
           (subs string 0 preferred-min)
           :else
           (subs string 0 (min (+ 1 max-diff-at)
