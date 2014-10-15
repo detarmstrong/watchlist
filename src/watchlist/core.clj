@@ -54,7 +54,7 @@
     preferences-file-path
     (pr-str prefs)))
 
-(def current-user (atom {:id nil :name nil})) 
+(def current-user (atom {:id nil :name nil}))
 (defn set-current-user [id name]
   (reset! current-user {:id id :name name}))
 
@@ -736,4 +736,4 @@
                              watchlist-frame
                              [:#updates-panel])
                            :to :top))
-                       (alert "No connectivity")))))
+                       (alert "No connectivity.\nClick the gear to set up Watchlist")))))
