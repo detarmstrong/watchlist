@@ -125,6 +125,6 @@
        (str redmine-url "/users.json")
          {:as :json
           :basic-auth [api-token ""]
-          :debug true})
+          :debug false})
     :body
     :users))
