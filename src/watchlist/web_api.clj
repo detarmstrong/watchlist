@@ -118,3 +118,12 @@
                      (catch java.net.MalformedURLException e false))]
     (> (:status attempt) 0)
     false))
+
+(defn get-all-users [redmine-url api-token]
+  (-> (clj-http.client/get
+        (str redmine-url "/users.json")
+          {:as :json
+           :basic-auth [api-token ""]
+           :debug true})
+    :body
+    :users))
