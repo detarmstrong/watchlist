@@ -46,7 +46,7 @@
         i))))
 
 (defn shortest-unique-strings
-  "Given seq of strings return the shortest unique string possible
+  "Given seq of strings maps the shortest unique string possible
   within the set, starting from left at position in string determined by
   pref-len.
   Repeated occurrences of a string are treated as one, as though uniq is
