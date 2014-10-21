@@ -108,7 +108,7 @@
                                                  ">="
                                                  iso-ts)
                                    :sort "updated_on:desc"
-                                   :limit 60}
+                                   :limit 120}
                     :debug true
                     :debug-body false})]
     (get-in response [:body :issues])))

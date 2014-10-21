@@ -66,7 +66,7 @@
 
 (def default-days-ago (time-core/minus
                         (time-core/now)
-                        (time-core/days 2)))
+                        (time-core/days 3)))
 (def last-update-ts (atom default-days-ago))
 (defn set-last-update-ts [ts]
   (reset! last-update-ts ts))
