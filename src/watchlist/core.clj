@@ -444,15 +444,21 @@
                         update-rank)
         update-uri-label (str "#" update-rank)
         updated-at (-> issue :updated_on)
-        relations (-> issue :relations)]
+        relations (-> issue :relations)
+        last-journal-entry (-> issue :journals (last))
+        update-author (ws-do
+                        @preferences
+                        (fn [ws]
+                          (api/resolve-formatted-name
+                            (get-in ws [:url])
+                            (get-in ws [:api-token])
+                            (-> last-journal-entry :user :id))))]
     (cond
       ; first check if NoteAndStatus
       (and
         (not (empty? (-> issue :journals (last) :notes)))
         (= "status_id" (-> issue :journals (last) :details (last) :name)))
-      (let [last-journal-entry (-> issue :journals (last))
-            update-text (-> last-journal-entry :notes)
-            update-author (-> last-journal-entry :user :name)
+      (let [update-text (-> last-journal-entry :notes)
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
         (NoteAndStatusUpdate. issue-id
@@ -472,9 +478,7 @@
       (and
         (= "status_id" (-> issue :journals (last) :details (last) :name))
         (empty? (-> issue :journals (last) :notes)))
-      (let [last-journal-entry (-> issue :journals (last))
-            update-author (-> last-journal-entry :user :name)
-            old-status (-> last-journal-entry :details (last) :old_value)
+      (let [old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)
             new-status-label (ws-do
                                @preferences
@@ -501,9 +505,7 @@
         ; if :notes field but not status_id
         (not (empty? (-> issue :journals (last) :notes)))
         (not= "status_id" (-> issue :journals (last) :details (last) :name)))
-      (let [last-journal-entry (-> issue :journals (last))
-            update-text (-> last-journal-entry :notes)
-            update-author (-> last-journal-entry :user :name)
+      (let [update-text (-> last-journal-entry :notes)
             old-status (-> last-journal-entry :details (last) :old_value)
             new-status (-> last-journal-entry :details (last) :new_value)]
         (NoteUpdate. issue-id

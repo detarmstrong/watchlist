@@ -162,18 +162,24 @@
     (fact "it converts an update to a Note update"
       (convert-update note-update-issue-ex)
       =>
-      ;TODO add ticket author here
       (just (->NoteUpdate 8475
                           5
                           5
-                          "Kyle Whalen"
+                          "Kyle"
                           [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
                           "Sites should be able to manage their contact information"
                           []
                           "Login card updated successfully. "
                           "http://redmine.visiontree.com/issues/8475#note-2"
                           "#2"
-                          "2014-08-21T21:48:35Z")))
+                          "2014-08-21T21:48:35Z"))
+      (provided
+        (watchlist.web-api/resolve-formatted-name
+          nil
+          nil
+          63)
+        =>
+        "Kyle"))
 
     (fact "it converts an update to a status change"
       (convert-update status-update-issue-ex)
@@ -181,7 +187,7 @@
       (just (->StatusUpdate 8475
                             5
                             5
-                            "Kyle Whalen"
+                            "Kyle"
                             [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
                             "Test related ticket"
                             []
@@ -191,7 +197,20 @@
                             "http://redmine.visiontree.com/issues/8475#note-1"
                             "#1"
                             "2014-08-21T21:48:35Z"))
-      (provided (watchlist.web-api/get-issue-status-name-by-id nil nil "18") => "QA Passed"))
+      (provided
+        (watchlist.web-api/get-issue-status-name-by-id
+          nil
+          nil
+          "18")
+        =>
+        "QA Passed")
+      (provided
+        (watchlist.web-api/resolve-formatted-name
+          nil
+          nil
+          63)
+        =>
+        "Kyle"))
 
     (fact "it converts an update to a hybrid status update and a note update"
       (convert-update status-and-note-update-issue-ex)
@@ -199,7 +218,7 @@
       (just (->NoteAndStatusUpdate 8475
                                    5
                                    5
-                                   "Kyle Whalen"
+                                   "Kyle"
                                    [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}] 
                                    "Sites should be able to manage their contact information"
                                    [{:id 5, :name "Danny Armstrong"} {:id 6, :name "Jodie Foster"}]
@@ -208,7 +227,14 @@
                                    "18"
                                    "http://redmine.visiontree.com/issues/8475#note-2"
                                    "#2"
-                                   "2014-08-21T21:48:35Z")))))
+                                   "2014-08-21T21:48:35Z"))
+      (provided
+        (watchlist.web-api/resolve-formatted-name
+          nil
+          nil
+          63)
+        =>
+        "Kyle"))))
 
 (facts "about contains-every?"
        (fact "it returns true if each path is found. Value can be nil."

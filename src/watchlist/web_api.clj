@@ -2,9 +2,10 @@
   "Wrap the api calls - no guarding of params here"
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
-  (:require [clojure.core.memoize :refer [memo]])
+  (:require [clojure.core.memoize :refer [memo memo-clear!]])
   (:require [clj-time.core :as time-core])
   (:require [clj-time.format :as time-format])
+  (:require [string.string :as my-string])
   (:use [cheshire.core :only (generate-string)])
   (:use [clojure.string :only (trim)]))
 
@@ -34,6 +35,50 @@
                                    :conn-timeout 8000
                                    :throw-exceptions false})]
     (get-in response [:body])))
+
+(defn get-all-users [redmine-url api-token]
+  (->
+    (clj-http.client/get
+      (str redmine-url "/users.json")
+      {:as :json
+       :basic-auth [api-token ""]
+       :socket-timeout 12000
+       :debug false})
+    :body
+    :users))
+
+(def memoized-get-all-users (memo get-all-users))
+
+(defn resolve-formatted-name
+  "Find shortest unique name of user by user-id"
+  [redmine-url api-token user-id]
+  (loop [retries-left 1]
+    (let [all-users (memoized-get-all-users redmine-url api-token)
+          formatted-names (my-string/shortest-unique-strings
+                            #(let [space-idx (-> % (.indexOf " "))]
+                               (if (not (neg? space-idx))
+                                   space-idx
+                                   (count %)))
+                            (map #(str (-> % :firstname ) " " (-> % :lastname))
+                                  all-users))
+
+          ;TODO memoize by-id instead of just the ws call to get all users
+          by-id (apply
+                  assoc
+                  {}
+                  (interleave
+                    (map
+                      #(-> % :id)
+                      all-users)
+                    formatted-names))]
+      (if (not (nil? (get by-id user-id)))
+        (get by-id user-id)
+        (if (pos? retries-left)
+          (do
+            ; try once to get users in case a new user is added
+            (memo-clear! memoized-get-all-users [redmine-url api-token])
+            (recur (dec retries-left)))
+          nil)))))
 
 (defn valid-token? [redmine-url api-token]
   "Make a request using the token provided, expect 200"
@@ -119,12 +164,4 @@
     (> (:status attempt) 0)
     false))
 
-(defn get-all-users [redmine-url api-token]
-  (->
-    (clj-http.client/get
-       (str redmine-url "/users.json")
-         {:as :json
-          :basic-auth [api-token ""]
-          :debug false})
-    :body
-    :users))
+
