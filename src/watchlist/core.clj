@@ -552,20 +552,17 @@
                 :text (:update-uri-label record))
        "wrap"]
       [(label
-                 :text (first
-                         (clojure.string/split
-                           (:update-author record)
-                           #"\s"))
-                 :tip (str "Updated at "
-                           (time-format/unparse 
-                             (time-format/formatter-local
-                               "MM/dd/yyyy hh:mm:ssa")
-                             (time-local/to-local-date-time
-                               (:updated-at record)))
-                           " by "
-                           (:update-author record)
-                           " "
-                           tags))
+         :text (:update-author record)
+         :tip (str "Updated at "
+                   (time-format/unparse
+                     (time-format/formatter-local
+                       "MM/dd/yyyy hh:mm:ssa")
+                     (time-local/to-local-date-time
+                       (:updated-at record)))
+                   " by "
+                   (:update-author record)
+                   " "
+                   tags))
        "growx, w 40:54:100"]
       [(text
          :text (str (cond
