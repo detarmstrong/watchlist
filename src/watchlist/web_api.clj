@@ -164,4 +164,15 @@
     (> (:status attempt) 0)
     false))
 
+(defn projects
+  "Get all projects from redmine"
+  [redmine-url api-token]
+  (get-in
+    (clj-http.client/get
+      (str redmine-url "/projects.json")
+      {:as :json
+       :basic-auth [api-token ""]
+       :debug false
+       :query-params {:limit 300}})
+    [:body :projects]))
 
