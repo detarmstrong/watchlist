@@ -26,8 +26,9 @@
 (defn get-token []
   @(load-token))
 
-(defn current-user [redmine-url api-token]
+(defn current-user
   "Retrieve authenticated user info via token"
+  [redmine-url api-token]
   (let [response (client/get (str redmine-url "/users/current.json")
                                   {:basic-auth [api-token "d"]
                                    :as :json
@@ -80,8 +81,9 @@
             (recur (dec retries-left)))
           nil)))))
 
-(defn valid-token? [redmine-url api-token]
+(defn valid-token?
   "Make a request using the token provided, expect 200"
+  [redmine-url api-token]
   (let [response (client/get (str redmine-url "/users/current.json")
                                   {:basic-auth [api-token "d"]
                                    :as :json
@@ -96,8 +98,9 @@
 (defn YYYY-mm-dd-fmt [ts]
   (time-format/unparse (time-format/formatter "YYYY-MM-dd") ts))
 
-(defn get-updated-issues [redmine-url api-token since-ts]
+(defn get-updated-issues
   "Return issues updated since-ts"
+  [redmine-url api-token since-ts]
   (let [iso-ts (iso-8601-fmt since-ts)
         response (client/get
                    (str redmine-url "/issues.json")
@@ -113,8 +116,9 @@
                     :debug-body false})]
     (get-in response [:body :issues])))
 
-(defn issue [redmine-url api-token id]
+(defn issue
   "Get detailed info of issue"
+  [redmine-url api-token id]
   (get-in
     (client/get
       (format "%s/issues/%d.json"
@@ -127,8 +131,9 @@
        :throw-exceptions true})
     [:body :issue]))
 
-(defn issue-statuses [redmine-url api-token]
+(defn issue-statuses
   "Get all issue statuses from redmine"
+  [redmine-url api-token]
   (reduce
     (fn [accum value]
        (assoc accum (:id value) (:name value)))
