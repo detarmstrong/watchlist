@@ -300,7 +300,7 @@
                                                      (-> val :issue_id))))
                            converted-maybe-update (convert-update maybe-related-issue)]
                        (if
-                         (and
+                         (or
                            (is-assignee? user-id converted-maybe-update)
                            (is-author? user-id converted-maybe-update))
                          (conj accum
