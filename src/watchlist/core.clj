@@ -12,7 +12,7 @@
             [seesaw.keymap :refer :all]
             [seesaw.mig :refer :all]
             [seesaw.swingx :refer [hyperlink busy-label]]
-            [seesaw.bind :as bind] 
+            [seesaw.bind :as bind]
             [clj-http.util :refer [url-encode]]
             [overtone.at-at :as at-at]
             [clj-time.core :as time-core]
@@ -24,6 +24,11 @@
 (declare set-update-items-list-ui)
 (declare load-preferences)
 (declare in?)
+(declare is-a-watcher?)
+(declare is-assignee?)
+(declare is-author?)
+(declare is-related-ticket?)
+(declare is-a-update-participant?)
 
 (def preferences-file-path
   (let [dot-file ".watchlist-preferences"
@@ -81,7 +86,8 @@
   (reset! is-connectivity? state))
 
 (defn ws-do
-  "Invoke webservice. f takes one arg being a map containing connection url and token"
+  "Invoke webservice. f takes one arg being a map containing
+   connection url and token"
   [ws f]
   (f ws))
 
@@ -98,8 +104,16 @@
                             (get-in ws [:url])
                             (get-in ws [:api-token]))))))
 
+(defn pref-selected?
+  "In the disk persisted pref data, is arg selected?"
+  [needle prefs]
+  (some
+    #(= needle (first %))
+    prefs))
+
 (defn open-options-dialog [e options]
   (-> (dialog
+        :id :settings-dialog
         :content (mig-panel
                    :items [
                      [(label
@@ -132,32 +146,42 @@
                         :text "Show me updates for tickets where ...")
                       "gaptop 5, wrap"]
                      [(checkbox :text "I'm the assignee"
-                                :id :im-the-assignee
-                                :selected? (-> options :filter-options (in? :im-the-assignee)))
+                                :id :is-assignee?
+                                :selected? (pref-selected?
+                                             :is-assignee?
+                                             (-> options :filter-options)))
                       "wrap"]
                      [(checkbox :text "I'm a watcher"
-                                :id :im-a-watcher
-                                :selected? (-> options :filter-options (in? :im-a-watcher)))
+                                :id :is-a-watcher?
+                                :selected? (pref-selected?
+                                             :is-a-watcher?
+                                             (-> options :filter-options)))
                       "wrap"]
                      [(checkbox :text "I'm the author"
-                                :id :im-the-author
-                                :selected? (-> options :filter-options (in? :im-the-author)))
+                                :id :is-author?
+                                :selected? (pref-selected?
+                                             :is-author?
+                                             (-> options :filter-options)))
                       "wrap"]
                      [(checkbox :text "The ticket is related to one of my assigned tickets"
-                                :id :related-ticket
-                                :selected? (-> options :filter-options (in? :related-ticket))
+                                :id :is-related-ticket?
+                                :selected? (pref-selected?
+                                             :is-related-ticket?
+                                             (-> options :filter-options))
                                 :tip "For example, the ticket is blocked by or precedes one of my tickets")
                       "wrap"]
                      [(checkbox :text "I've participated in the ticket updates"
-                                :id :participated-in-updates
-                                :selected? (-> options :filter-options (in? :participated-in-updates)))
+                                :id :is-a-update-participant?
+                                :selected? (pref-selected?
+                                             :is-a-update-participant?
+                                             (-> options :filter-options)))
                       "wrap"]
-                    ; [(checkbox :text "I'm mentioned in the ticket or in an update to the ticket"
-                    ;            :id :mentioned-in-updates
-                    ;            :selected? (-> options :filter-options (in? :mentioned-in-updates)))
-                    ;  "wrap"]
+                     ;[(checkbox :text "The project is any of: "
+                     ;           :id :is-project?
+                     ;           :selected? (pref-selected? :is-project?))
+                     ; ""]
                      ])
-         :parent (to-widget e)
+         :parent (to-root e)
          :option-type :ok-cancel
          :success-fn (fn [p]
                        {:api-token (config
@@ -170,32 +194,39 @@
                                          (to-frame p)
                                          [:#url])
                                          :text)
-                        :filter-options [
-                                         (if (selection (select
+                        :filter-options (filterv
+                                          #(identity %)
+                                          [
+                                          (if (selection (select
                                                            (to-frame p)
-                                                             [:#im-a-watcher]))
-                                           :im-a-watcher)
-                                         (if (selection (select
+                                                           [:#is-a-watcher?]))
+                                            [:is-a-watcher? (:id @current-user)])
+                                          (if (selection (select
                                                            (to-frame p)
-                                                             [:#im-the-assignee]))
-                                           :im-the-assignee)
-                                         (if (selection (select
+                                                           [:#is-assignee?]))
+                                            [:is-assignee? (:id @current-user)])
+                                          (if (selection (select
                                                            (to-frame p)
-                                                             [:#im-the-author]))
-                                           :im-the-author)
-                                         (if (selection (select
+                                                           [:#is-author?]))
+                                            [:is-author? (:id @current-user)])
+                                          (if (selection (select
                                                            (to-frame p)
-                                                             [:#related-ticket]))
-                                           :related-ticket)
-                                         (if (selection (select
+                                                           [:#is-related-ticket?]))
+                                            [:is-related-ticket? (:id @current-user)])
+                                          (if (selection (select
                                                            (to-frame p)
-                                                             [:#participated-in-updates]))
-                                           :participated-in-updates)
-                                       ;  (if (selection (select
-                                       ;                    (to-frame p)
-                                       ;                      [:#mentioned-in-updates]))
-                                       ;    :mentioned-in-updates)
-                                         ]})
+                                                           [:#is-a-update-participant?]))
+                                            [:is-a-update-participant? (:id @current-user)])]
+                                        ;(if (selection (select
+                                        ;                 (to-frame p)
+                                        ;                 [:#is-project?]))
+                                          ;[:is-project?
+                                             ;(selection (select
+                                             ;          (to-frame p)
+                                             ;          [:#only-projects-lb]))
+                                          ;   ]
+                                        ;  )
+                                        )})
          :cancel-fn (fn [p] nil))
     pack! show!))
 
@@ -213,7 +244,7 @@
                   (-> s (.getVerticalScrollBar) (.setUnitIncrement 8))
                   (-> s (.getHorizontalScrollBar) (.setUnitIncrement 6))
                   s)
-       :south (border-panel 
+       :south (border-panel
                 :border [(empty-border :thickness 6)]
                 :west (horizontal-panel
                         :items [;"Feed fresh as of 3 minutes ago  "
@@ -298,7 +329,8 @@
                                                      (-> ws :url)
                                                      (-> ws :api-token)
                                                      (-> val :issue_id))))
-                           converted-maybe-update (convert-update maybe-related-issue)]
+                           converted-maybe-update (convert-update
+                                                    maybe-related-issue)]
                        (if
                          (or
                            (is-assignee? user-id converted-maybe-update)
@@ -329,7 +361,8 @@
 
 (defn is-mentioned-in-ticket-or-update?
   "Determine if user was mentioned by any other user in any updates to ticket.
-   Requires user info like first and last name and email to search for ident-options strings
+   Requires user info like first and last name and email to search for
+   ident-options strings
    like @darmstrong, or darmstrong or Danny Armstrong or Danny, if configured"
   [ident-options update-record]
   (or (reduce
@@ -351,44 +384,25 @@
                          ident-options)
                      (:journals update-record)))))))
 
+(defn is-project?
+  "Does update-record have a project found in project-ids? Works against
+  the intermediate record, not the raw data returned from web service"
+  [project-ids update-record]
+  (in? project-ids (-> update-record :project :id)))
+
 (defn in?
   "true if seq contains elm"
   [seq elm]
   (some #(= elm %) seq))
 
 (defn tag-updates
-  "For each update in update-list, run preds (resolve keyword
-   to real func first) and collect results."
-  [user-id update-list pred-syms]
-  (mapv
-    (fn [update]
-      [update (cond
-                (and
-                  (in? pred-syms :im-the-author)
-                  (is-author? user-id update))
-                '(:im-the-author)
-                (and
-                  (in? pred-syms :im-the-assignee)
-                  (is-assignee? user-id update))
-                '(:im-the-assignee)
-                (and
-                  (in? pred-syms :im-a-watcher)
-                  (is-a-watcher? user-id update))
-                '(:im-a-watcher)
-                (and
-                  (in? pred-syms :participated-in-updates)
-                  (is-a-update-participant? user-id update))
-                '(:participated-in-updates)
-               ; (and
-               ;   (in? pred-syms :is-mentioned-in-ticket-or-update)
-               ;   (is-mentioned-in-ticket-or-update? user-id update))
-               ; '(:is-mentioned-in-ticket-or-update)
-                (and
-                  (in? pred-syms :related-ticket)
-                  (is-related-ticket? user-id update))
-                '(:related-ticket)
-                :else '())])
-    update-list))
+  "For each update in update-list, run preds and collect results."
+  [update-list preds]
+  (let [some-preds (apply some-fn preds)]
+    (mapv
+      (fn [update]
+        [update (some-preds update)])
+      update-list)))
 
 (defrecord NoteUpdate [id
                        assignee-id
@@ -400,7 +414,8 @@
                        update-text
                        update-uri
                        update-uri-label
-                       updated-at])
+                       updated-at
+                       project])
 (defrecord StatusUpdate [id
                          assignee-id
                          ticket-author-id
@@ -413,7 +428,8 @@
                          new-status-label
                          update-uri
                          update-uri-label
-                         updated-at])
+                         updated-at
+                         project])
 (defrecord NoteAndStatusUpdate [id
                                 assignee-id
                                 ticket-author-id
@@ -426,7 +442,22 @@
                                 new-status
                                 update-uri
                                 update-uri-label
-                                updated-at])
+                                updated-at
+                                project])
+(defrecord StatusUpdate [id
+                         assignee-id
+                         ticket-author-id
+                         update-author
+                         relations
+                         subject
+                         watchers
+                         old-status
+                         new-status
+                         new-status-label
+                         update-uri
+                         update-uri-label
+                         updated-at
+                         project])
 
 (defn convert-update
   "Given an issue update determine if it's a NoteUpdate
@@ -452,7 +483,8 @@
                           (api/resolve-formatted-name
                             (get-in ws [:url])
                             (get-in ws [:api-token])
-                            (-> last-journal-entry :user :id))))]
+                            (-> last-journal-entry :user :id))))
+        project (-> issue :project)]
     (cond
       ; first check if NoteAndStatus
       (and
@@ -473,7 +505,8 @@
                               new-status
                               update-uri
                               update-uri-label
-                              updated-at))
+                              updated-at
+                              project))
       ; second, check if StatusUpdate
       (and
         (= "status_id" (-> issue :journals (last) :details (last) :name))
@@ -499,7 +532,8 @@
                        new-status-label
                        update-uri
                        update-uri-label
-                       updated-at))
+                       updated-at
+                       project))
       ; third, check if NoteUpdate
       (and
         ; if :notes field but not status_id
@@ -518,7 +552,8 @@
                      update-text
                      update-uri
                      update-uri-label
-                     updated-at))
+                     updated-at
+                     project))
       ; check here for brand new instance - no :journals
       ; suggests making new type of update like NewIssueUpdate?
       ;or just filter out the nils?
@@ -532,7 +567,7 @@
       updated-at)))
 
 (defn build-update-row [[record tags]]
-  (mig-panel 
+  (mig-panel
     :border [(empty-border :thickness 0)]
     :background (color "white")
     :constraints ["ins 10", "[][grow][]", "[top]"]
@@ -586,7 +621,7 @@
              l (label
                  :text (format-time-ago parsed-updated-at)
                  :tip (str "Updated at "
-                           (time-format/unparse 
+                           (time-format/unparse
                              (time-format/formatter-local
                                "MM/dd/yyyy hh:mm:ssa")
                              (time-local/to-local-date-time
@@ -633,7 +668,7 @@
   "Take old-list of updates and merge new-list by
    first removing duplicate issue id items in old list
    and prepending new-list"
-  [old-list new-list] 
+  [old-list new-list]
   (let [new-update-ids (reduce
                          (fn [accum value]
                            (conj accum (:id value)))
@@ -656,7 +691,30 @@
 
 (defn is-tagged-item?
   [item]
-  (not (empty? (second item))))
+  (not (false? (second item))))
+
+(defn build-preds-from-filter-options
+  "filter-options are stored with
+  the func itself and it's arguments after it in a vec. This returns
+  a partial with those args applied."
+  [filter-options]
+  (reduce
+    (fn [accum filter-opt]
+      (if filter-opt
+        (conj
+          accum
+          (fn [update]
+            (if
+              ((partial
+                 (ns-resolve
+                   'watchlist.core
+                   (-> (first filter-opt) name symbol))
+                 (second filter-opt)
+                 update))
+              (first filter-opt)
+              false)))))
+    []
+    filter-options))
 
 (defn set-update-items-list-ui [from-date]
   (set-last-update-ts (time-core/now))
@@ -671,9 +729,9 @@
                            @master-updates)
                          issue-updates)
           tagged-items (tag-updates
-                         (:id @current-user)
                          merged-items
-                         (-> @preferences :filter-options))
+                         (build-preds-from-filter-options
+                           (-> @preferences :filter-options)))
           filtered-items (filterv
                            is-tagged-item?
                            tagged-items)
@@ -688,8 +746,7 @@
             [:#updates-panel])
           :items built-items))
       ; terrible hack to get the damn ui to correct itself
-      ; after reloading the items. maybe try
-      ; recreating the initial state which doesn't fuck up
+      ; after reloading the items (large whitespace between rows)
       (seesaw.timer/timer
         (fn [e]
           (-> (select watchlist-frame [:#updates-panel]) (.revalidate)))

@@ -92,7 +92,7 @@
      "Limo lambdo",
    :created_on "2014-08-20T01:52:49Z",
    :author {:id 5, :name "Danny Armstrong"},
-   :assigned_to {:id 5, :name "Danny Armstrong"},
+   :assigned_to {:id 6, :name "Lorenzo Lamas"},
    :watchers [],
    :updated_on "2014-08-21T21:48:35Z",
    :start_date "2014-08-19",
@@ -219,7 +219,7 @@
                                    5
                                    5
                                    "Kyle"
-                                   [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}] 
+                                   [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
                                    "Sites should be able to manage their contact information"
                                    [{:id 5, :name "Danny Armstrong"} {:id 6, :name "Jodie Foster"}]
                                    "Login card updated successfully. "
@@ -238,14 +238,14 @@
 
 (facts "about contains-every?"
        (fact "it returns true if each path is found. Value can be nil."
-             (contains-every? (last 
+             (contains-every? (last
                                 (get-in status-update-issue-ex
                                         [:relations]))
                               [[:id] [:delay]])
              =>
              true)
        (fact "it returns false if path not found. Value can be nil."
-             (contains-every? (last 
+             (contains-every? (last
                                 (get-in status-update-issue-ex
                                         [:relations]))
                               [[:id] [:delNOTHERE]])
@@ -283,9 +283,9 @@
              "30s ago"))
 
 (facts "about merge-updates"
-  (fact "it places newer updates by id at the head. assumes items already 
+  (fact "it places newer updates by id at the head. assumes items already
          descendingly sorted"
-    (merge-updates [{:id 12 :v "no one updates me:(" :ts 1201} 
+    (merge-updates [{:id 12 :v "no one updates me:(" :ts 1201}
                     {:id 14 :v "been there" :ts 1200}]
                    [{:id 14 :v "been there again" :ts 1203}
                     {:id 15 :v "new here" :ts 1202}])
@@ -313,67 +313,79 @@
   (edn/read-string (slurp "dev-resources/get-updated-issues.clj")))
 
 (facts "about predicates for tagging updates by user criteria"
- (fact "is-assignee? will return true if the arg is the assignee"
-   (is-assignee?
-     5
-     (convert-update status-and-note-update-issue-ex))
-   =>
-   true)
- (fact "is-author? will return true if the arg is the author"
-   (is-author?
-     5
-     (convert-update status-and-note-update-issue-ex))
-   =>
-   true)
- (fact "is-a-watcher? will return true if the arg is a watcher"
-   (is-a-watcher?
-     5
-     (convert-update status-and-note-update-issue-ex))
-   =>
-   true)
- (fact "is-a-watcher? will return false if the arg is not a watcher"
-   (is-a-watcher?
-     5
-     (convert-update note-update-issue-ex))
-   =>
-   false)
-; (fact "is-mentioned-in-ticket-or-update? will return true if the arg mentioned in note update"
-;   (is-mentioned-in-ticket-or-update?
-;     5
-;     (convert-update note-update-issue-ex))
-;   =>
-;   false)
- (fact "is-related-ticket? returns true if a ticket is related to this one"
-   (is-related-ticket?
-     5
-     (convert-update status-and-note-update-issue-ex))
-   =>
-  ; (contains {:related? true
-  ;            :reason "relates"
-  ;            :id 8329})
-   true
-   (provided
-     (watchlist.web-api/issue nil nil 8329)
+  (fact "is-assignee? will return true if the arg is the assignee"
+     (is-assignee?
+       5
+       (convert-update status-and-note-update-issue-ex))
      =>
-     related-ticket-ex)
-   (provided
-     (watchlist.web-api/get-issue-status-name-by-id
-       nil
-       nil
-       "18") => "QA Passed")))
+     true)
+  (fact "is-author? will return true if the arg is the author"
+    (is-author?
+      5
+      (convert-update status-and-note-update-issue-ex))
+    =>
+    true)
+  (fact "is-a-watcher? will return true if the arg is a watcher"
+    (is-a-watcher?
+      5
+      (convert-update status-and-note-update-issue-ex))
+    =>
+    true)
+  (fact "is-a-watcher? will return false if the arg is not a watcher"
+    (is-a-watcher?
+      5
+      (convert-update note-update-issue-ex))
+    =>
+    false)
+  ; (fact "is-mentioned-in-ticket-or-update? will return true if the arg mentioned in note update"
+  ;   (is-mentioned-in-ticket-or-update?
+  ;     5
+  ;     (convert-update note-update-issue-ex))
+  ;   =>
+  ;   false)
+  (fact "is-related-ticket? returns true if a ticket is related to this one"
+    (is-related-ticket?
+      5
+      (convert-update status-and-note-update-issue-ex))
+    =>
+   ; (contains {:related? true
+   ;            :reason "relates"
+   ;            :id 8329})
+    true
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander")
+    (provided
+      (watchlist.web-api/issue
+        anything anything 8329) => related-ticket-ex)
+    (provided
+      (watchlist.web-api/get-issue-status-name-by-id
+        anything anything "18") => "QA Passed"))
+  (fact "is-project? returns true if a ticket is in vec of projs"
+    (is-project?
+      [1]
+      {:project {:id 1}})
+    =>
+    true))
+
+(facts "about build-preds-from-filter-options"
+  (fact "seq of filters as stored on disk is turned into pred fns"
+    (let [preds (build-preds-from-filter-options
+                  [[:is-a-watcher? 4] [:is-project? [1 2 3 8 9]]])]
+      ((first preds) {:watchers [{:id 4}]}))
+    =>
+    :is-a-watcher?))
 
 (facts "about update filter pipeline"
   (fact "each update is scrutinized for inclusion - is-author? and is-assignee?"
-    (second
-      (first
-        (tag-updates
-          5
-          (map
-            convert-update
-            [status-and-note-update-issue-ex])
-          '(:im-the-author :im-the-assignee))))
+    (first (tag-updates
+             (map
+               convert-update
+               [status-and-note-update-issue-ex])
+             (build-preds-from-filter-options
+               [[:is-project? [1 2 3 8 9]] [:is-a-watcher? 5]])))
     =>
-    (contains '(:im-the-author)  :in-any-order)))
-    ;(provided
-    ;  (watchlist.web-api/get-issue-status-name-by-id
-    ;    "18") => "QA Passed")))
+    (contains '(:is-project?) :in-any-order)
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander")))
