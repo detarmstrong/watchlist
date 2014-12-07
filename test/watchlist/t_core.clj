@@ -172,7 +172,9 @@
                           "Login card updated successfully. "
                           "http://redmine.visiontree.com/issues/8475#note-2"
                           "#2"
-                          "2014-08-21T21:48:35Z"))
+                          "2014-08-21T21:48:35Z"
+                          {:id 1, :name "VTOC "}
+                          ))
       (provided
         (watchlist.web-api/resolve-formatted-name
           nil
@@ -196,7 +198,8 @@
                             "QA Passed"
                             "http://redmine.visiontree.com/issues/8475#note-1"
                             "#1"
-                            "2014-08-21T21:48:35Z"))
+                            "2014-08-21T21:48:35Z"
+                            {:id 1, :name "VTOC "}))
       (provided
         (watchlist.web-api/get-issue-status-name-by-id
           nil
@@ -227,7 +230,8 @@
                                    "18"
                                    "http://redmine.visiontree.com/issues/8475#note-2"
                                    "#2"
-                                   "2014-08-21T21:48:35Z"))
+                                   "2014-08-21T21:48:35Z"
+                                   {:id 1, :name "VTOC "}))
       (provided
         (watchlist.web-api/resolve-formatted-name
           nil
@@ -318,25 +322,37 @@
        5
        (convert-update status-and-note-update-issue-ex))
      =>
-     true)
+     true
+     (provided
+       (watchlist.web-api/resolve-formatted-name
+         anything anything anything) => "Ray Bigsander"))
   (fact "is-author? will return true if the arg is the author"
     (is-author?
       5
       (convert-update status-and-note-update-issue-ex))
     =>
-    true)
+    true
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander"))
   (fact "is-a-watcher? will return true if the arg is a watcher"
     (is-a-watcher?
       5
       (convert-update status-and-note-update-issue-ex))
     =>
-    true)
+    true
+    (provided
+          (watchlist.web-api/resolve-formatted-name
+            anything anything anything) => "Ray Bigsander"))
   (fact "is-a-watcher? will return false if the arg is not a watcher"
     (is-a-watcher?
       5
       (convert-update note-update-issue-ex))
     =>
-    false)
+    false
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander"))
   ; (fact "is-mentioned-in-ticket-or-update? will return true if the arg mentioned in note update"
   ;   (is-mentioned-in-ticket-or-update?
   ;     5
@@ -377,6 +393,29 @@
     :is-a-watcher?))
 
 (facts "about update filter pipeline"
+  (fact "is-tagged-item? looks for item tag"
+    [(is-tagged-item?
+       [:the-stuff :the-tag])
+     (is-tagged-item?
+       [:other-stuff false])]
+    =>
+    [true false])
+  (fact "is-tagged-item? knows if an item is tagged or not"
+    (filterv
+      is-tagged-item?
+      (tag-updates
+        (map
+          convert-update
+          [status-and-note-update-issue-ex note-update-issue-ex])
+        (build-preds-from-filter-options
+          [[:is-a-watcher? 5]])))
+    =>
+    (one-of anything)
+    ;TODO this provided clause is copied from the next fact
+    ; how can I reuse it across facts?
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander"))
   (fact "each update is scrutinized for inclusion - is-author? and is-assignee?"
     (first (tag-updates
              (map
@@ -386,6 +425,24 @@
                [[:is-project? [1 2 3 8 9]] [:is-a-watcher? 5]])))
     =>
     (contains '(:is-project?) :in-any-order)
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander"))
+  (fact "an issue failing all filtering criteria is filtered out"
+    (filterv
+      is-tagged-item?
+      (tag-updates
+        (map
+          convert-update
+          [(read-string (slurp "dev-resources/9174.clj"))])
+        (build-preds-from-filter-options
+          [[:is-a-watcher? 5]
+           [:is-assignee? 5]
+           [:is-author? 5]
+           [:is-related-ticket? 5]
+           [:is-a-update-participant? 5]])))
+    =>
+    (just [])
     (provided
       (watchlist.web-api/resolve-formatted-name
         anything anything anything) => "Ray Bigsander")))

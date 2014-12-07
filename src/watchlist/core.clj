@@ -395,14 +395,6 @@
   [seq elm]
   (some #(= elm %) seq))
 
-(defn tag-updates
-  "For each update in update-list, run preds and collect results."
-  [update-list preds]
-  (let [some-preds (apply some-fn preds)]
-    (mapv
-      (fn [update]
-        [update (some-preds update)])
-      update-list)))
 
 (defrecord NoteUpdate [id
                        assignee-id
@@ -444,20 +436,6 @@
                                 update-uri-label
                                 updated-at
                                 project])
-(defrecord StatusUpdate [id
-                         assignee-id
-                         ticket-author-id
-                         update-author
-                         relations
-                         subject
-                         watchers
-                         old-status
-                         new-status
-                         new-status-label
-                         update-uri
-                         update-uri-label
-                         updated-at
-                         project])
 
 (defn convert-update
   "Given an issue update determine if it's a NoteUpdate
@@ -688,6 +666,18 @@
     :content (frame-content)
     :size [500 :by 700]
     :minimum-size [530 :by 700]))
+
+(defn tag-updates
+  "For each update in update-list, run preds and collect results."
+  [update-list preds]
+  (let [some-preds (apply some-fn preds)]
+    (mapv
+      (fn [update]
+        ; The or here is required because some-fn may return nil if 4
+        ; or more preds are given to it and they all fail evaluation
+        [update (or (some-preds update)
+                    false)])
+      update-list)))
 
 (defn is-tagged-item?
   [item]
