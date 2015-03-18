@@ -58,6 +58,8 @@
   (spit
     preferences-file-path
     (pr-str prefs)))
+(defn get-preferences[]
+  @preferences)
 
 (def current-user (atom {:id nil :name nil}))
 (defn set-current-user [id name]
@@ -395,154 +397,64 @@
   [seq elm]
   (some #(= elm %) seq))
 
-
-(defrecord NoteUpdate [id
-                       assignee-id
-                       ticket-author-id
-                       update-author
-                       relations
-                       subject
-                       watchers
-                       update-text
-                       update-uri
-                       update-uri-label
-                       updated-at
-                       project])
-(defrecord StatusUpdate [id
-                         assignee-id
-                         ticket-author-id
-                         update-author
-                         relations
-                         subject
-                         watchers
-                         old-status
-                         new-status
-                         new-status-label
-                         update-uri
-                         update-uri-label
-                         updated-at
-                         project])
-(defrecord NoteAndStatusUpdate [id
-                                assignee-id
-                                ticket-author-id
-                                update-author
-                                relations
-                                subject
-                                watchers
-                                update-text
-                                old-status
-                                new-status
-                                update-uri
-                                update-uri-label
-                                updated-at
-                                project])
-
 (defn convert-update
-  "Given an issue update determine if it's a NoteUpdate
-   or a StatusUpdate or both or something else and return it"
+  "Convert an update from it's original redmine model to one watchlist expects.
+   Really just adding a few fields, resolving status id to human readable, etc."
   [issue]
   (let [issue-id (-> issue :id)
-        subject (-> issue :subject)
-        assignee-id (-> issue :assigned_to :id)
-        ticket-author-id (-> issue :author :id)
-        watchers (-> issue :watchers)
         update-rank (count (-> issue :journals))
-        update-uri (str "http://redmine.visiontree.com/issues/"
-                        issue-id
-                        "#note-"
-                        update-rank)
-        update-uri-label (str "#" update-rank)
-        updated-at (-> issue :updated_on)
-        relations (-> issue :relations)
         last-journal-entry (-> issue :journals (last))
-        update-author (ws-do
-                        @preferences
+        is-note-update? (and (contains? last-journal-entry :notes) 
+                             (not (= "" (-> last-journal-entry :notes))))
+        is-status-update? (some
+                            (fn [prop-update]
+                              (= (:name prop-update) "status_id"))
+                            (:details last-journal-entry))
+        is-description-update? (some
+                                  (fn [prop-update]
+                                    (= (:name prop-update) "description"))
+                                  (:details last-journal-entry))]
+    (if (or is-note-update? is-status-update? is-description-update?)
+      {:id issue-id
+       :subject (-> issue :subject)
+       :assignee-id (-> issue :assigned_to :id)
+       :ticket-author-id (-> issue :author :id)
+       :watchers (-> issue :watchers)
+       :update-rank (count (-> issue :journals))
+       :update-uri (str (:url (get-preferences))
+                     "/issues/"
+                     issue-id
+                     "#note-"
+                     update-rank)
+       :update-uri-label (str "#" update-rank)
+       :updated-at (-> issue :updated_on)
+       :relations (-> issue :relations)
+       :update-author (ws-do
+                        (get-preferences)
                         (fn [ws]
                           (api/resolve-formatted-name
                             (get-in ws [:url])
                             (get-in ws [:api-token])
                             (-> last-journal-entry :user :id))))
-        project (-> issue :project)]
-    (cond
-      ; first check if NoteAndStatus
-      (and
-        (not (empty? (-> issue :journals (last) :notes)))
-        (= "status_id" (-> issue :journals (last) :details (last) :name)))
-      (let [update-text (-> last-journal-entry :notes)
-            old-status (-> last-journal-entry :details (last) :old_value)
-            new-status (-> last-journal-entry :details (last) :new_value)]
-        (NoteAndStatusUpdate. issue-id
-                              assignee-id
-                              ticket-author-id
-                              update-author
-                              relations
-                              subject
-                              watchers
-                              update-text
-                              old-status
-                              new-status
-                              update-uri
-                              update-uri-label
-                              updated-at
-                              project))
-      ; second, check if StatusUpdate
-      (and
-        (= "status_id" (-> issue :journals (last) :details (last) :name))
-        (empty? (-> issue :journals (last) :notes)))
-      (let [old-status (-> last-journal-entry :details (last) :old_value)
-            new-status (-> last-journal-entry :details (last) :new_value)
-            new-status-label (ws-do
-                               @preferences
-                               (fn [ws]
-                                 (api/get-issue-status-name-by-id
-                                   (get-in ws [:url])
-                                   (get-in ws [:api-token])
-                                   new-status)))]
-        (StatusUpdate. issue-id
-                       assignee-id
-                       ticket-author-id
-                       update-author
-                       relations
-                       subject
-                       watchers
-                       old-status
-                       new-status
-                       new-status-label
-                       update-uri
-                       update-uri-label
-                       updated-at
-                       project))
-      ; third, check if NoteUpdate
-      (and
-        ; if :notes field but not status_id
-        (not (empty? (-> issue :journals (last) :notes)))
-        (not= "status_id" (-> issue :journals (last) :details (last) :name)))
-      (let [update-text (-> last-journal-entry :notes)
-            old-status (-> last-journal-entry :details (last) :old_value)
-            new-status (-> last-journal-entry :details (last) :new_value)]
-        (NoteUpdate. issue-id
-                     assignee-id
-                     ticket-author-id
-                     update-author
-                     relations
-                     subject
-                     watchers
-                     update-text
-                     update-uri
-                     update-uri-label
-                     updated-at
-                     project))
-      ; check here for brand new instance - no :journals
-      ; suggests making new type of update like NewIssueUpdate?
-      ;or just filter out the nils?
-      )))
+       :project (-> issue :project)
+       :update-text (-> last-journal-entry :notes)
+       :status-update (filter
+                        (fn [prop-update]
+                          (= (:name prop-update) "status_id"))
+                        (:details last-journal-entry))
+       :description-update (filter
+                             (fn [prop-update]
+                               (= (:name prop-update) "description"))
+                             (:details last-journal-entry))}
+      ; nil will be filtered out implicitly
+      nil)))
 
 (defn make-label-text [author updated-at]
   (str (first
-      (clojure.string/split author #"\s"))
-    ", "
-    (format-time-ago
-      updated-at)))
+         (clojure.string/split author #"\s"))
+       ", "
+       (format-time-ago
+         updated-at)))
 
 (defn build-update-row [[record tags]]
   (mig-panel
@@ -578,16 +490,19 @@
                    tags))
        "growx, w 40:54:100"]
       [(text
-         :text (str (cond
-                      (or (instance? NoteUpdate record)
-                          (instance? NoteAndStatusUpdate record))
-                      (:update-text record)
-                      (or (instance? NoteAndStatusUpdate record)
-                          (instance? StatusUpdate record))
-                      (str (if (instance? NoteAndStatusUpdate record)
-                             "\n")
-                           "Status set to: "
-                           (:new-status-label record))))
+         :text (str 
+                 (reduce (fn [state update]
+                           (str state
+                             (:name update)
+                             ": "
+                             (:old_value update)
+                             " -> "
+                             (:new_value update)
+                             "\n"))
+                         ""
+                         (into (:description-update record)
+                               (:status-update record)))
+                 (:update-text record))
         :multi-line? true
         :editable? false
         :wrap-lines? true
@@ -620,8 +535,7 @@
        ""]]))
 
 (defn get-issue-updates
-  "Iterate issue updates and convert to intermediate representation
-   that uses defrecord"
+  "Iterate issue updates and convert to intermediate representation"
   [from-ts]
   (filterv
     #(not (nil? %))
