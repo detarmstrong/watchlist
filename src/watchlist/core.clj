@@ -438,10 +438,22 @@
                             (-> last-journal-entry :user :id))))
        :project (-> issue :project)
        :update-text (-> last-journal-entry :notes)
-       :status-update (filter
-                        (fn [prop-update]
-                          (= (:name prop-update) "status_id"))
-                        (:details last-journal-entry))
+       :status-update (map
+                        (fn [detail]
+                          (assoc
+                            detail
+                            :new_value 
+                            (ws-do
+                              @preferences
+                              (fn [ws]
+                                (api/get-issue-status-name-by-id
+                                  (get-in ws [:url])
+                                  (get-in ws [:api-token])
+                                  (:new_value detail))))))
+                        (filter
+                          (fn [prop-update]
+                            (= (:name prop-update) "status_id"))
+                          (:details last-journal-entry)))
        :description-update (filter
                              (fn [prop-update]
                                (= (:name prop-update) "description"))
@@ -476,63 +488,80 @@
                             " in browser"))
                 :text (:update-uri-label record))
        "wrap"]
-      [(label
-         :text (:update-author record)
-         :tip (str "Updated at "
-                   (time-format/unparse
-                     (time-format/formatter-local
-                       "MM/dd/yyyy hh:mm:ssa")
-                     (time-local/to-local-date-time
-                       (:updated-at record)))
-                   " by "
-                   (:update-author record)
-                   " "
-                   tags))
-       "growx, w 40:54:100"]
+      [(vertical-panel
+         :border (empty-border :thickness 0)
+         :id :updates-panel
+         :background (color "white")
+         :items [(label
+                   :text (:update-author record)
+                   :tip (str "Updated at "
+                             (time-format/unparse
+                               (time-format/formatter-local
+                                 "MM/dd/yyyy hh:mm:ssa")
+                               (time-local/to-local-date-time
+                                 (:updated-at record)))
+                             " by "
+                             (:update-author record)
+                             " "
+                             tags))
+                 (let [parsed-updated-at (time-format/parse (:updated-at record))
+                       initial-delay (- 60 (time-core/second parsed-updated-at))
+                       l (label
+                           :text (format-time-ago parsed-updated-at)
+                           :tip (str "Updated at "
+                                     (time-format/unparse
+                                       (time-format/formatter-local
+                                         "MM/dd/yyyy hh:mm:ssa")
+                                       (time-local/to-local-date-time
+                                         (:updated-at record)))
+                                     " by "
+                                     (:update-author record)
+                                     " "
+                                     tags))
+                       t (seesaw.timer/timer (fn [_]
+                                               (config!
+                                                 l
+                                                 :text
+                                                 (format-time-ago parsed-updated-at))
+                                               -1)
+                                               :delay 60000
+                                               :initial-delay initial-delay)]
+                   l)])
+       "span 1 2, growx, w 40:54:100"]
       [(text
-         :text (str 
-                 (reduce (fn [state update]
-                           (str state
-                             (:name update)
-                             ": "
-                             (:old_value update)
-                             " -> "
-                             (:new_value update)
-                             "\n"))
-                         ""
-                         (into (:description-update record)
-                               (:status-update record)))
-                 (:update-text record))
+        :text (reduce (fn [state update]
+                        (str state
+                          (condp = (:name update)
+                            "status_id" (str "Status set to: "
+                                             (:new_value update))
+                            "description" "Description updated"
+                            "Property updated")))
+                      ""
+                      (into (:description-update record)
+                            (:status-update record)))
+        :visible? (if (some #(and (not (nil? %)) (not (= "" %)))
+                            (into (:description-update record)
+                                 (:status-update record)))
+                    true
+                    false)
+        :multi-line? true
+        :editable? false
+        :wrap-lines? true
+        :background (color "#ffffff")
+        :margin 5)
+      "span 2 1, gap 5, growx, w 240:400:700, wrap, hidemode 1"]
+      [(text
+        :text (:update-text record)
+        :visible? (if (not (= (:update-text record) ""))
+                    true
+                    false)
         :multi-line? true
         :editable? false
         :wrap-lines? true
         :background (color "#f9f9f9")
         :margin 5)
-      "span 2 2, gap 8, growx, w 240:400:700, wrap"]
-      [(let [parsed-updated-at (time-format/parse (:updated-at record))
-             initial-delay (- 60 (time-core/second parsed-updated-at))
-             l (label
-                 :text (format-time-ago parsed-updated-at)
-                 :tip (str "Updated at "
-                           (time-format/unparse
-                             (time-format/formatter-local
-                               "MM/dd/yyyy hh:mm:ssa")
-                             (time-local/to-local-date-time
-                               (:updated-at record)))
-                           " by "
-                           (:update-author record)
-                           " "
-                           tags))
-             t (seesaw.timer/timer (fn [_]
-                                     (config!
-                                       l
-                                       :text
-                                       (format-time-ago parsed-updated-at))
-                                     -1)
-                                     :delay 60000
-                                     :initial-delay initial-delay)]
-         l)
-       ""]]))
+      "span 2 2, gap 5, growx, w 240:400:700, hidemode 1"]
+      ]))
 
 (defn get-issue-updates
   "Iterate issue updates and convert to intermediate representation"
