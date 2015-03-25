@@ -159,47 +159,43 @@
 
 (facts "about convert-update"
   (let [updated-at (time-format/parse "2014-08-21T21:48:35Z")]
-    (fact "it converts an update to a Note update"
+    (fact "it converts an redmine json representation to custom format, only note update"
       (convert-update note-update-issue-ex)
       =>
-      (just (->NoteUpdate 8475
-                          5
-                          5
-                          "Kyle"
-                          [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
-                          "Sites should be able to manage their contact information"
-                          []
-                          "Login card updated successfully. "
-                          "http://redmine.visiontree.com/issues/8475#note-2"
-                          "#2"
-                          "2014-08-21T21:48:35Z"
-                          {:id 1, :name "VTOC "}
-                          ))
+      (contains {:id 8475
+                 :assignee-id 5
+                 :ticket-author-id 5
+                 :update-author "Kyle"
+                 :relations [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
+                 :subject "Sites should be able to manage their contact information"
+                 :watchers []
+                 :update-text "Login card updated successfully. "
+                 :update-uri "https://redmine.example.com/issues/8475#note-2"
+                 :update-uri-label "#2"
+                 :updated-at "2014-08-21T21:48:35Z"
+                 :status-update []
+                 :description-update []
+                 :project {:id 1, :name "VTOC "}})
+      (provided 
+        (watchlist.core/get-preferences)
+        =>
+        {:url "https://redmine.example.com"
+         :api-token nil})
       (provided
         (watchlist.web-api/resolve-formatted-name
-          nil
+          "https://redmine.example.com" ; this will come from get-preferences provided below
           nil
           63)
         =>
         "Kyle"))
 
-    (fact "it converts an update to a status change"
+    (fact "it converts an redmine json representation to custom format, only note status property update"
       (convert-update status-update-issue-ex)
       =>
-      (just (->StatusUpdate 8475
-                            5
-                            5
-                            "Kyle"
-                            [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
-                            "Test related ticket"
-                            []
-                            "13"
-                            "18"
-                            "QA Passed"
-                            "http://redmine.visiontree.com/issues/8475#note-1"
-                            "#1"
-                            "2014-08-21T21:48:35Z"
-                            {:id 1, :name "VTOC "}))
+      (contains {:id 8475
+                 :subject "Test related ticket"
+                 :update-text ""
+                 :status-update [{:name "status_id", :new_value "18", :old_value "13", :property "attr"}]})
       (provided
         (watchlist.web-api/get-issue-status-name-by-id
           nil
@@ -218,27 +214,20 @@
     (fact "it converts an update to a hybrid status update and a note update"
       (convert-update status-and-note-update-issue-ex)
       =>
-      (just (->NoteAndStatusUpdate 8475
-                                   5
-                                   5
-                                   "Kyle"
-                                   [{:delay nil, :id 806, :issue_id 8329, :issue_to_id 8475, :relation_type "relates"}]
-                                   "Sites should be able to manage their contact information"
-                                   [{:id 5, :name "Danny Armstrong"} {:id 6, :name "Jodie Foster"}]
-                                   "Login card updated successfully. "
-                                   "13"
-                                   "18"
-                                   "http://redmine.visiontree.com/issues/8475#note-2"
-                                   "#2"
-                                   "2014-08-21T21:48:35Z"
-                                   {:id 1, :name "VTOC "}))
+      (contains {:id 8475
+                 :update-text "Login card updated successfully. "
+                 :status-update [{:name "status_id", :new_value "18", :old_value "13", :property "attr"}]})
       (provided
         (watchlist.web-api/resolve-formatted-name
           nil
           nil
           63)
         =>
-        "Kyle"))))
+        "Kyle"))
+    (fact "it returns nil for updates it doesn't understand"
+          (convert-update (read-string (slurp "dev-resources/9676.clj")))
+          =>
+          nil)))
 
 (facts "about contains-every?"
        (fact "it returns true if each path is found. Value can be nil."
@@ -393,56 +382,62 @@
     :is-a-watcher?))
 
 (facts "about update filter pipeline"
-  (fact "is-tagged-item? looks for item tag"
-    [(is-tagged-item?
-       [:the-stuff :the-tag])
-     (is-tagged-item?
-       [:other-stuff false])]
+ (fact "is-tagged-item? looks for item tag"
+   [(is-tagged-item?
+      [:the-stuff :the-tag])
+    (is-tagged-item?
+      [:other-stuff false])]
+   =>
+   [true false])
+ (fact "is-tagged-item? knows if an item is tagged or not"
+   (filterv
+     is-tagged-item?
+     (tag-updates
+       (map
+         convert-update
+         [status-and-note-update-issue-ex note-update-issue-ex])
+       (build-preds-from-filter-options
+         [[:is-a-watcher? 5]])))
+   =>
+   (one-of anything)
+   ;TODO this provided clause is copied from the next fact
+   ; how can I reuse it across facts?
+   (provided
+     (watchlist.web-api/resolve-formatted-name
+       anything anything anything) => "Ray Bigsander"))
+ (fact "each update is scrutinized for inclusion - is-author? and is-assignee?"
+   (first (tag-updates
+            (map
+              convert-update
+              [status-and-note-update-issue-ex])
+            (build-preds-from-filter-options
+              [[:is-project? [1 2 3 8 9]] [:is-a-watcher? 5]])))
+   =>
+   (contains '(:is-project?) :in-any-order)
+   (provided
+     (watchlist.web-api/resolve-formatted-name
+       anything anything anything) => "Ray Bigsander"))
+ (fact "an issue failing all filtering criteria is filtered out"
+   (filterv
+     is-tagged-item?
+     (tag-updates
+       (map
+         convert-update
+         [(read-string (slurp "dev-resources/9174.clj"))])
+       (build-preds-from-filter-options
+         [[:is-a-watcher? 5]
+          [:is-assignee? 5]
+          [:is-author? 5]
+          [:is-related-ticket? 5]
+          [:is-a-update-participant? 5]])))
+   =>
+   (just [])
+   (provided
+     (watchlist.web-api/resolve-formatted-name
+       anything anything anything) => "Ray Bigsander"))
+ (fact "issue 9239 is not filtered out given specific filters"
+   (-> (read-string (slurp "dev-resources/9239.clj")) convert-update)
     =>
-    [true false])
-  (fact "is-tagged-item? knows if an item is tagged or not"
-    (filterv
-      is-tagged-item?
-      (tag-updates
-        (map
-          convert-update
-          [status-and-note-update-issue-ex note-update-issue-ex])
-        (build-preds-from-filter-options
-          [[:is-a-watcher? 5]])))
-    =>
-    (one-of anything)
-    ;TODO this provided clause is copied from the next fact
-    ; how can I reuse it across facts?
-    (provided
-      (watchlist.web-api/resolve-formatted-name
-        anything anything anything) => "Ray Bigsander"))
-  (fact "each update is scrutinized for inclusion - is-author? and is-assignee?"
-    (first (tag-updates
-             (map
-               convert-update
-               [status-and-note-update-issue-ex])
-             (build-preds-from-filter-options
-               [[:is-project? [1 2 3 8 9]] [:is-a-watcher? 5]])))
-    =>
-    (contains '(:is-project?) :in-any-order)
-    (provided
-      (watchlist.web-api/resolve-formatted-name
-        anything anything anything) => "Ray Bigsander"))
-  (fact "an issue failing all filtering criteria is filtered out"
-    (filterv
-      is-tagged-item?
-      (tag-updates
-        (map
-          convert-update
-          [(read-string (slurp "dev-resources/9174.clj"))])
-        (build-preds-from-filter-options
-          [[:is-a-watcher? 5]
-           [:is-assignee? 5]
-           [:is-author? 5]
-           [:is-related-ticket? 5]
-           [:is-a-update-participant? 5]])))
-    =>
-    (just [])
-    (provided
-      (watchlist.web-api/resolve-formatted-name
-        anything anything anything) => "Ray Bigsander")))
+   (identity 3)))
+  
+  
