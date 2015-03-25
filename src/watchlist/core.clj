@@ -489,7 +489,7 @@
                 :text (:update-uri-label record))
        "wrap"]
       [(vertical-panel
-         :border (empty-border :thickness 0)
+         :border (empty-border :top 4)
          :id :updates-panel
          :background (color "white")
          :items [(label
