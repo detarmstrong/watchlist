@@ -18,7 +18,8 @@
             [clj-time.core :as time-core]
             [clj-time.format :as time-format]
             [clj-time.local :as time-local])
-  (:import (java.awt Desktop)))
+  (:import (java.awt Desktop)
+           (com.bulenkov.iconloader IconLoader)))
 
 (declare convert-update)
 (declare set-update-items-list-ui)
@@ -260,26 +261,29 @@
                                   :id :fetching-indicator
                                   :busy? true)])
 
-                :east (action :name ""
-                              :icon (io/resource
-                                      "gear.png")
-                              :handler (fn [e]
-                                         (if-let [options (open-options-dialog
-                                                            e
-                                                            @preferences)]
-                                           (let [prefs-changed? (not (= @preferences options))]
-                                             ; write out preferences to file and
-                                             ; global ref
-                                             (set-preferences options)
-                                             (if prefs-changed?
-                                               (set-last-update-ts default-days-ago))
-                                             ; recheck connectivity and do query if connected
-                                             (if (not @is-connectivity?)
-                                               (set-is-connectivity?
-                                                 (check-connectivity)))
-                                             (if @is-connectivity?
-                                               (set-update-items-list-ui
-                                                 @last-update-ts)))))))))
+                :east (action 
+                        :name ""
+                        :icon (icon (IconLoader/findIcon (.getResource
+                                                           (.getContextClassLoader
+                                                             (Thread/currentThread))
+                                                           "gear.png")))
+                        :handler (fn [e]
+                                   (if-let [options (open-options-dialog
+                                                      e
+                                                      @preferences)]
+                                     (let [prefs-changed? (not (= @preferences options))]
+                                       ; write out preferences to file and
+                                       ; global ref
+                                       (set-preferences options)
+                                       (if prefs-changed?
+                                         (set-last-update-ts default-days-ago))
+                                       ; recheck connectivity and do query if connected
+                                       (if (not @is-connectivity?)
+                                         (set-is-connectivity?
+                                           (check-connectivity)))
+                                       (if @is-connectivity?
+                                         (set-update-items-list-ui
+                                           @last-update-ts)))))))))
 
 (defn contains-every? [m keyseqs]
   (let [not-found (Object.)]
