@@ -179,6 +179,8 @@
                                              :is-a-update-participant?
                                              (-> options :filter-options)))
                       "wrap"]
+                     ["<html><br/><i>WatchList will get the last <b>3</b> days of updates</i></html>"
+                      "wrap"]
                      ;[(checkbox :text "The project is any of: "
                      ;           :id :is-project?
                      ;           :selected? (pref-selected? :is-project?))
