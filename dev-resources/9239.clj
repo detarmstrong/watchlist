@@ -27,7 +27,7 @@
      :old_value
      "John status: alive",
      :new_value
-     "John status: deceased",
+     "John status: deceased"}]}],
  :tracker {:id 4, :name "Task"},
  :estimated_hours 5.0,
  :relations
