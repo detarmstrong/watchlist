@@ -83,7 +83,7 @@
      "Site and company contact information is presented",
    :priority {:id 5, :name "Normal"},
    :spent_hours 0.0,
-   :project {:id 1, :name "VTOC "}})
+   :project {:id 1, :name "Mike's Early Inflation Gesticulation"}})
 
 (def related-ticket-ex
   {
@@ -175,7 +175,7 @@
                  :updated-at "2014-08-21T21:48:35Z"
                  :status-update []
                  :description-update []
-                 :project {:id 1, :name "VTOC "}})
+                 :project {:id 1, :name "Mike's Early Inflation Gesticulation"}})
       (provided 
         (watchlist.core/get-preferences)
         =>
@@ -195,35 +195,42 @@
       (contains {:id 8475
                  :subject "Test related ticket"
                  :update-text ""
-                 :status-update [{:name "status_id", :new_value "18", :old_value "13", :property "attr"}]})
-      (provided
-        (watchlist.web-api/get-issue-status-name-by-id
-          nil
-          nil
-          "18")
-        =>
-        "QA Passed")
+                 :status-update [{:name "status_id", :new_value "QA Passed", :old_value "13", :property "attr"}]})
       (provided
         (watchlist.web-api/resolve-formatted-name
-          nil
-          nil
-          63)
+          anything
+          anything
+          anything)
         =>
-        "Kyle"))
+        "Kyle")
+      (provided
+        (watchlist.web-api/get-issue-status-name-by-id
+          anything
+          anything
+          anything)
+        =>
+        "QA Passed"))
 
     (fact "it converts an update to a hybrid status update and a note update"
       (convert-update status-and-note-update-issue-ex)
       =>
       (contains {:id 8475
                  :update-text "Login card updated successfully. "
-                 :status-update [{:name "status_id", :new_value "18", :old_value "13", :property "attr"}]})
+                 :status-update [{:name "status_id", :new_value "QA Pending", :old_value "13", :property "attr"}]})
       (provided
         (watchlist.web-api/resolve-formatted-name
-          nil
-          nil
-          63)
+          anything
+          anything
+          anything)
         =>
-        "Kyle"))
+        "Kyle")
+      (provided
+        (watchlist.web-api/get-issue-status-name-by-id
+          anything
+          anything
+          anything)
+        =>
+        "QA Pending"))
     (fact "it returns nil for updates it doesn't understand"
           (convert-update (read-string (slurp "dev-resources/9676.clj")))
           =>
@@ -249,7 +256,10 @@
        (fact "intervals a year ago or greater show 14y"
              (format-time-ago (time-core/date-time 2000 1 1))
              =>
-             "14y ago")
+             "14y ago"
+             (provided (time-core/now)
+                       =>
+                       (time-core/date-time 2014 1 1)))
        (fact "intervals a day ago show 2d"
              (format-time-ago (time-core/minus
                                 (time-core/now)
@@ -362,16 +372,17 @@
         anything anything anything) => "Ray Bigsander")
     (provided
       (watchlist.web-api/issue
-        anything anything 8329) => related-ticket-ex)
-    (provided
-      (watchlist.web-api/get-issue-status-name-by-id
-        anything anything "18") => "QA Passed"))
-  (fact "is-project? returns true if a ticket is in vec of projs"
-    (is-project?
-      [1]
-      {:project {:id 1}})
+        anything anything 8329) => related-ticket-ex))
+  (fact "is-project-substring? will return true if any matcher string is found in project name"
+    (is-project-substring?
+      "His Hero, Live Inflation, Early Inflation"
+      (convert-update note-update-issue-ex))
     =>
-    true))
+    true
+    (provided
+      (watchlist.web-api/resolve-formatted-name
+        anything anything anything) => "Ray Bigsander"))
+  )
 
 (facts "about build-preds-from-filter-options"
   (fact "seq of filters as stored on disk is turned into pred fns"
@@ -404,7 +415,14 @@
    ; how can I reuse it across facts?
    (provided
      (watchlist.web-api/resolve-formatted-name
-       anything anything anything) => "Ray Bigsander"))
+       anything anything anything) => "Ray Bigsander")
+   (provided
+     (watchlist.web-api/get-issue-status-name-by-id
+       anything
+       anything
+       anything)
+     =>
+     "QA Pending"))
  (fact "each update is scrutinized for inclusion - is-author? and is-assignee?"
    (first (tag-updates
             (map
@@ -416,7 +434,14 @@
    (contains '(:is-project?) :in-any-order)
    (provided
      (watchlist.web-api/resolve-formatted-name
-       anything anything anything) => "Ray Bigsander"))
+       anything anything anything) => "Ray Bigsander")
+   (provided
+     (watchlist.web-api/get-issue-status-name-by-id
+       anything
+       anything
+       anything)
+     =>
+     "QA Pending"))
  (fact "an issue failing all filtering criteria is filtered out"
    (filterv
      is-tagged-item?
@@ -434,10 +459,6 @@
    (just [])
    (provided
      (watchlist.web-api/resolve-formatted-name
-       anything anything anything) => "Ray Bigsander"))
- (fact "issue 9239 is not filtered out given specific filters"
-   (-> (read-string (slurp "dev-resources/9239.clj")) convert-update)
-    =>
-   (identity 3)))
+       anything anything anything) => "Ray Bigsander")))
   
   

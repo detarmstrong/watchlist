@@ -179,12 +179,22 @@
                                              :is-a-update-participant?
                                              (-> options :filter-options)))
                       "wrap"]
+                     [(checkbox :text "The project name contains (comma separated):"
+                                  :id :is-project-substring?
+                                  :selected? (pref-selected?
+                                               :is-project-substring?
+                                               (-> options :filter-options)))
+                      "wrap"]
+                     [(text :columns 22
+                             :id :project-substring-list
+                             :text (-> (filter
+                                         #(= (first %) :is-project-substring?)
+                                         (:filter-options options))
+                                     first
+                                     second))
+                      "gapleft 24, wrap"]
                      ["<html><br/><i>WatchList will get the last <b>3</b> days of updates</i></html>"
                       "wrap"]
-                     ;[(checkbox :text "The project is any of: "
-                     ;           :id :is-project?
-                     ;           :selected? (pref-selected? :is-project?))
-                     ; ""]
                      ])
          :parent (to-root e)
          :option-type :ok-cancel
@@ -221,17 +231,15 @@
                                           (if (selection (select
                                                            (to-frame p)
                                                            [:#is-a-update-participant?]))
-                                            [:is-a-update-participant? (:id @current-user)])]
-                                        ;(if (selection (select
-                                        ;                 (to-frame p)
-                                        ;                 [:#is-project?]))
-                                          ;[:is-project?
-                                             ;(selection (select
-                                             ;          (to-frame p)
-                                             ;          [:#only-projects-lb]))
-                                          ;   ]
-                                        ;  )
-                                        )})
+                                            [:is-a-update-participant? (:id @current-user)])
+                                          (if (selection (select
+                                                           (to-frame p)
+                                                           [:#is-project-substring?]))
+                                            [:is-project-substring? (config
+                                                                      (select
+                                                                        (to-frame p)
+                                                                        [:#project-substring-list])
+                                                                      :text)])])})
          :cancel-fn (fn [p] nil))
     pack! show!))
 
@@ -397,6 +405,20 @@
   the intermediate record, not the raw data returned from web service"
   [project-ids update-record]
   (in? project-ids (-> update-record :project :id)))
+
+(defn is-project-substring?
+  "Does update-record have a project name matching any of the user
+  test strings provided? Works against the intermediate record returned
+  from convert-update, not the raw data returned from web service"
+  [project-substrings update-record]
+  (let [substrings (clojure.string/split project-substrings #",")
+        update-project-name (-> update-record :project :name)]
+    (not
+      (nil?
+        (some
+           (fn [candidate]
+             (re-find (re-pattern candidate) update-project-name))
+           substrings)))))
 
 (defn in?
   "true if seq contains elm"
