@@ -580,7 +580,8 @@
       "span 2 1, gap 5, growx, w 240:400:700, wrap, hidemode 1"]
       [(text
         :text (:update-text record)
-        :visible? (if (not (= (:update-text record) ""))
+        :visible? (if (and (not (nil? (:update-text record)))
+                           (not (= (:update-text record) "")))
                     true
                     false)
         :multi-line? true
