@@ -2,7 +2,7 @@
 
 Get project issue updates that matter to you most in a desktop based news feed.
 
-|watchlist screenshot|settings screenshot|
+![Screenshots](https://s3.amazonaws.com/watchlist-github/screens.png)
 
 WatchList is tested on Mac and Linux, but because it's Java should work on Windows too.
 
