@@ -12,10 +12,10 @@ WatchList only requires your local Redmine instance url and your user api key. N
 
 ## Usage
 
-Download app: <latest release>
+Download app: [Latest Release](https://github.com/detarmstrong/watchlist/releases/download/0.9.0/watchlist-0.9.0-standalone.jar)
 
 Then from the command-line run:
-java -jar <latest release jar file>
+java -jar Downloads/watchlist-0.9.0-standalone.jar
 
 ## License
 
