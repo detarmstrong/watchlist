@@ -6,8 +6,8 @@ Get project issue updates that matter to you most in a desktop based news feed.
 
 ### Requirements
 
-1. WatchList is tested on Mac and Linux, but because it's Java it should work on Windows too.
-1. Works with Redmine 2.5.0 and above.
+* WatchList is tested on Mac and Linux, but because it's Java it should work on Windows too.
+* Works with Redmine 2.5.0 and above.
 
 ## How/Why
 
@@ -15,9 +15,8 @@ WatchList only requires your local Redmine instance url and your user api key. N
 
 ## Use It Now
 
-Download app: [Latest Release](https://github.com/detarmstrong/watchlist/releases/download/0.9.0/watchlist-0.9.0-standalone.jar)
-
-Then from the command-line run:
+1. Download app: [Latest Release](https://github.com/detarmstrong/watchlist/releases/download/0.9.0/watchlist-0.9.0-standalone.jar)
+1. Then from the command-line run:
 ```java -jar Downloads/watchlist-0.9.0-standalone.jar```
 
 ## License
