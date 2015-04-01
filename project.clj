@@ -1,4 +1,4 @@
-(defproject watchlist "0.1.0"
+(defproject watchlist "0.9.0"
   :description "watchlist watches redmine updates"
   :url "https://github.com/detarmstrong/watchlist"
   :license {:name "Eclipse Public License"
