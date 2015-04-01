@@ -4,7 +4,10 @@ Get project issue updates that matter to you most in a desktop based news feed.
 
 ![Screenshots](https://s3.amazonaws.com/watchlist-github/screens.png)
 
-WatchList is tested on Mac and Linux, but because it's Java should work on Windows too.
+### Requirements
+
+1. WatchList is tested on Mac and Linux, but because it's Java should work on Windows too.
+1. Works with Redmine 2.5.0 and (presumably) above.
 
 ### How
 
