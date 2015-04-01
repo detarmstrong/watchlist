@@ -637,7 +637,7 @@
     :on-close :exit
     :content (frame-content)
     :size [500 :by 700]
-    :minimum-size [530 :by 700]))
+    :minimum-size [400 :by 500]))
 
 (defn tag-updates
   "For each update in update-list, run preds and collect results."
@@ -755,3 +755,8 @@
                              [:#updates-panel])
                            :to :top))
                        (alert "No connectivity.\nClick the gear to set up Watchlist")))))
+
+(defn -main
+  [& args]
+  ; should I use invoke-later here?
+  (start-app))
