@@ -210,7 +210,7 @@
                                          [:#url])
                                          :text)
                         :filter-options (filterv
-                                          #(identity %)
+                                          identity
                                           [
                                           (if (selection (select
                                                            (to-frame p)
@@ -519,7 +519,7 @@
   (mig-panel
     :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["ins 10", "[][][grow]", "[top]"]
+    :constraints ["ins 0", "10[][]0[grow]10", "10[top]0[]8"]
     :items [
       [(label
          :icon (str 
@@ -531,7 +531,7 @@
                    (.toLowerCase)
                    (trim)
                    (string.string/md5hex))
-                 "?rating=PG&size=40&default=retro")
+                 "?rating=PG&size=40&d=retro")
          :paint rounded-edges-painter)
        "span 1 2, w 40:40:40"]
       [(vertical-panel
@@ -550,8 +550,10 @@
                              (:update-author record)
                              " "
                              tags))
-                 (let [parsed-updated-at (time-format/parse (:updated-at record))
-                       initial-delay (- 60 (time-core/second parsed-updated-at))
+                 (let [parsed-updated-at (time-format/parse
+                                           (:updated-at record))
+                       initial-delay (- 60 (time-core/second
+                                             parsed-updated-at))
                        l (label
                            :text (format-time-ago parsed-updated-at)
                            :tip (str "Updated at "
@@ -568,7 +570,8 @@
                                                (config!
                                                  l
                                                  :text
-                                                 (format-time-ago parsed-updated-at))
+                                                 (format-time-ago
+                                                   parsed-updated-at))
                                                -1)
                                                :delay 60000
                                                :initial-delay initial-delay)]
@@ -599,14 +602,15 @@
                                        (:status-update record)))
                     :visible? (if (some #(and (not (nil? %)) (not (= "" %)))
                                         (into (:description-update record)
-                                             (:status-update record)))
+                                              (:status-update record)))
                                 true
                                 false)
                     :multi-line? true
                     :editable? false
                     :wrap-lines? true
-                    :background (color "#ffffff")
-                    :margin [0 0 5 0])
+                    :background (color "#f9f9f9")
+                    :margin 4)
+                  [:fill-v 2]
                   (text
                     :text (:update-text record)
                     :visible? (if (and (not (nil? (:update-text record)))
@@ -617,7 +621,7 @@
                     :editable? false
                     :wrap-lines? true
                     :background (color "#f9f9f9")
-                    :margin 5)])
+                    :margin 4)])
           "gapleft 10, gaptop 0, growx, w 100:200:700, hidemode 1"]
       ]))
 
