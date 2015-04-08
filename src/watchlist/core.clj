@@ -464,6 +464,14 @@
                             (get-in ws [:url])
                             (get-in ws [:api-token])
                             (-> last-journal-entry :user :id))))
+       :update-author-email (:mail
+                               (ws-do
+                                  (get-preferences)
+                                  (fn [ws]
+                                    (api/get-user-by-id
+                                      (get-in ws [:url])
+                                      (get-in ws [:api-token])
+                                      (-> last-journal-entry :user :id)))))
        :project (-> issue :project)
        :update-text (-> last-journal-entry :notes)
        :status-update (map
@@ -496,28 +504,38 @@
        (format-time-ago
          updated-at)))
 
+(defn rounded-edges-painter [c g]
+  (let [w (.getWidth c)
+        h (.getHeight c)]
+    (doto g
+      (seesaw.graphics/draw
+       (seesaw.graphics/rounded-rect -5 -5 (+ w 10) (+ h 10) 20)
+       (seesaw.graphics/style 
+         :stroke 10
+         :foreground (seesaw.color/color 255 255 255 255)
+         :background (seesaw.color/color 0 0 0 0))))))
+
 (defn build-update-row [[record tags]]
   (mig-panel
     :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["ins 10", "[][grow][]", "[top]"]
+    :constraints ["ins 10", "[][][grow]", "[top]"]
     :items [
-      [(label :text (str "#"
-                         (:id record)
-                         " "
-                         (:subject record))
-              :font "ARIAL-BOLD-14")
-       "span 2, growx, w 240:400:700"]
-      ; Hack to get the text to set. :text on hyperlink did not work
-      [(config! (hyperlink
-                  :uri (:update-uri record)
-                  :tip (str "Open update "
-                            (:update-uri-label record)
-                            " in browser"))
-                :text (:update-uri-label record))
-       "wrap"]
+      [(label
+         :icon (str 
+                 "https://secure.gravatar.com/avatar/"
+                 ; TODO check for empty and nil emails
+                 ; show some gravatar placeholder?
+                 (->
+                   (:update-author-email record)
+                   (.toLowerCase)
+                   (trim)
+                   (string.string/md5hex))
+                 "?rating=PG&size=40&default=retro")
+         :paint rounded-edges-painter)
+       "span 1 2, w 40:40:40"]
       [(vertical-panel
-         :border (empty-border :top 4)
+         :border (empty-border :top 0)
          :id :updates-panel
          :background (color "white")
          :items [(label
@@ -555,41 +573,52 @@
                                                :delay 60000
                                                :initial-delay initial-delay)]
                    l)])
-       "span 1 2, growx, w 40:54:100"]
-      [(text
-        :text (reduce (fn [state update]
-                        (str state
-                          (condp = (:name update)
-                            "status_id" (str "Status set to: "
-                                             (:new_value update))
-                            "description" "Description updated"
-                            "Property updated")))
-                      ""
-                      (into (:description-update record)
-                            (:status-update record)))
-        :visible? (if (some #(and (not (nil? %)) (not (= "" %)))
-                            (into (:description-update record)
-                                 (:status-update record)))
-                    true
-                    false)
-        :multi-line? true
-        :editable? false
-        :wrap-lines? true
-        :background (color "#ffffff")
-        :margin 5)
-      "span 2 1, gap 5, growx, w 240:400:700, wrap, hidemode 1"]
-      [(text
-        :text (:update-text record)
-        :visible? (if (and (not (nil? (:update-text record)))
-                           (not (= (:update-text record) "")))
-                    true
-                    false)
-        :multi-line? true
-        :editable? false
-        :wrap-lines? true
-        :background (color "#f9f9f9")
-        :margin 5)
-      "span 2 2, gap 5, growx, w 240:400:700, hidemode 1"]
+       "span 1 2, w 40:54:100"]
+      [(label
+         :text (str "#"
+                 (:id record)
+                 " "
+                 (:subject record))
+         :h-text-position :right
+         :font "HELVETICA-BOLD-14")
+       "gapleft 10, gapbottom 0, gaptop 2, growx, w 70:90, wrap"]
+      [(vertical-panel
+         :border (empty-border :top 4)
+         :id :updates-panel
+         :background (color "white")
+         :items [(text
+                   :text (reduce (fn [state update]
+                                   (str state
+                                     (condp = (:name update)
+                                       "status_id" (str "Status set to: "
+                                                        (:new_value update))
+                                       "description" "Description updated"
+                                       "Property updated")))
+                                 ""
+                                 (into (:description-update record)
+                                       (:status-update record)))
+                    :visible? (if (some #(and (not (nil? %)) (not (= "" %)))
+                                        (into (:description-update record)
+                                             (:status-update record)))
+                                true
+                                false)
+                    :multi-line? true
+                    :editable? false
+                    :wrap-lines? true
+                    :background (color "#ffffff")
+                    :margin [0 0 5 0])
+                  (text
+                    :text (:update-text record)
+                    :visible? (if (and (not (nil? (:update-text record)))
+                                       (not (= (:update-text record) "")))
+                                true
+                                false)
+                    :multi-line? true
+                    :editable? false
+                    :wrap-lines? true
+                    :background (color "#f9f9f9")
+                    :margin 5)])
+          "gapleft 10, gaptop 0, growx, w 100:200:700, hidemode 1"]
       ]))
 
 (defn get-issue-updates
@@ -637,7 +666,8 @@
     :on-close :exit
     :content (frame-content)
     :size [500 :by 700]
-    :minimum-size [400 :by 500]))
+    :minimum-size [400 :by 500]
+    :icon "https://raw.githubusercontent.com/detarmstrong/watchlist/master/resources/gear%402x.png"))
 
 (defn tag-updates
   "For each update in update-list, run preds and collect results."

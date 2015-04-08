@@ -1,6 +1,8 @@
 (ns string.string
-  (:require [clojure.string :as s :refer [join split-lines split]]))
-
+  (:require [clojure.string :as s :refer [join split-lines split]])
+  (import (java.security MessageDigest)
+          (java.math BigInteger)))
+ 
 (defn find-prev-occurrence-of-char [char text range-start]
   "Find occurrence of single char in text looking backwards
    from point range-start. range-start is 0 indexed"
@@ -72,3 +74,11 @@
                               (count string))))))
     strings))
 
+; seems to be clojure adapted from http://stackoverflow.com/a/421696/202076
+(defn md5hex [s]
+  (let [algorithm (MessageDigest/getInstance "MD5")
+        size (* 2 (.getDigestLength algorithm))
+        raw (.digest algorithm (.getBytes s))
+        sig (.toString (BigInteger. 1 raw) 16)
+        padding (apply str (repeat (- size (count sig)) "0"))]
+    (str padding sig)))
