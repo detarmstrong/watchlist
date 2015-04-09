@@ -1,6 +1,7 @@
 (ns watchlist.core
   (:gen-class) ; required for uberjar
   (:require [watchlist.web-api :as api]
+            [watchlist.window :as window]
             [clojure.java.io :as io]
             [clojure.core :refer :all]
             [clojure.string :refer [join split-lines trim]]
@@ -671,7 +672,7 @@
     :content (frame-content)
     :size [500 :by 700]
     :minimum-size [400 :by 500]
-    :icon "https://raw.githubusercontent.com/detarmstrong/watchlist/master/resources/gear%402x.png"))
+    :icon "logo.png"))
 
 (defn tag-updates
   "For each update in update-list, run preds and collect results."
@@ -762,6 +763,7 @@
            (get-in u [:user :lastname])))))
 
 (defn start-app []
+  (window/set-icon! "logo.png")
   (native!)
   (set-preferences (load-preferences))
   (add-watch
