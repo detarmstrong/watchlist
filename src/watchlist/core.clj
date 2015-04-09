@@ -790,7 +790,7 @@
                              watchlist-frame
                              [:#updates-panel])
                            :to :top))
-                       (alert "No connectivity.\nClick the gear to set up Watchlist")))))
+                       (alert "No connectivity.\nClick the gear to set up WatchList")))))
 
 (defn -main
   [& args]
