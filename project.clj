@@ -1,4 +1,4 @@
-(defproject watchlist "0.9.0"
+(defproject watchlist "0.9.1"
   :description "watchlist watches redmine updates"
   :url "https://github.com/detarmstrong/watchlist"
   :license {:name "Eclipse Public License"
@@ -11,7 +11,7 @@
                  [org.clojure/core.memoize "0.5.6"]
                  [overtone/at-at "1.2.0"]
                  [clj-time "0.8.0"]
-                 [com.bulenkov/iconloader "1.1"]]
+                 [com.bulenkov/iconloader "1.0"]]
   :profiles {:dev {:dependencies [[midje "1.6.3"]]}}
   :main watchlist.core
   :jvm-opts ["-Xmx128m"])
