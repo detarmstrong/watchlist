@@ -525,10 +525,12 @@
       [(label
          :icon (str 
                  "https://secure.gravatar.com/avatar/"
-                 ; TODO check for empty and nil emails
-                 ; show some gravatar placeholder?
                  (->
-                   (:update-author-email record)
+                   (if
+                     (not (clojure.string/blank?
+                            (:update-author-email record)))
+                     (:update-author-email record)
+                     (:update-author record))
                    (.toLowerCase)
                    (trim)
                    (string.string/md5hex))
