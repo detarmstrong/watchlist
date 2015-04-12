@@ -433,6 +433,7 @@
   (let [issue-id (-> issue :id)
         update-rank (count (-> issue :journals))
         last-journal-entry (-> issue :journals (last))
+        last-journal-entry-created-at (:created_on last-journal-entry)
         is-note-update? (and (contains? last-journal-entry :notes) 
                              (not (= "" (-> last-journal-entry :notes))))
         is-status-update? (some
@@ -449,7 +450,7 @@
        :assignee-id (-> issue :assigned_to :id)
        :ticket-author-id (-> issue :author :id)
        :watchers (-> issue :watchers)
-       :update-rank (count (-> issue :journals))
+       :update-rank update-rank
        :update-uri (str (:url (get-preferences))
                      "/issues/"
                      issue-id
@@ -457,6 +458,7 @@
                      update-rank)
        :update-uri-label (str "#" update-rank)
        :updated-at (-> issue :updated_on)
+       :last-journal-entry-created-at last-journal-entry-created-at
        :relations (-> issue :relations)
        :update-author (ws-do
                         (get-preferences)
@@ -632,7 +634,17 @@
   "Iterate issue updates and convert to intermediate representation"
   [from-ts]
   (filterv
-    #(not (nil? %))
+    #(and
+       (not (nil? %))
+       ; In redmine, updates to child tasks will touch the 
+       ; updated_at of the parent task, possibly causing a false
+       ; positive.
+       ; Filter out updates where the last journal entry created is less than
+       ; the start date range (from-ts)
+       (time-core/after?
+         (time-local/to-local-date-time
+           (:last-journal-entry-created-at %))
+         from-ts))
     (mapv
       #(convert-update
          (ws-do
@@ -684,8 +696,9 @@
       (fn [update]
         ; The or here is required because some-fn may return nil if 4
         ; or more preds are given to it and they all fail evaluation
-        [update (or (some-preds update)
-                    false)])
+        [update
+         (or (some-preds update)
+              false)])
       update-list)))
 
 (defn is-tagged-item?
