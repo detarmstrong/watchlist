@@ -21,9 +21,9 @@ WatchList starts by grabbing the last 3 days worth of updates.
 
 ## Use It Now
 
-1. Download app: [Latest Release](https://github.com/detarmstrong/watchlist/releases/download/0.9.0/watchlist-0.9.0-standalone.jar)
+1. Download app: [Latest Release](https://github.com/detarmstrong/watchlist/releases/latest)
 1. Then from the command-line run:
-```java -jar Downloads/watchlist-0.9.0-standalone.jar```
+```java -jar Downloads/watchlist-<version>-standalone.jar```
 
 **Copyright © 2015 Bluecussive**
 
