@@ -50,6 +50,12 @@
 
 (def memoized-get-all-users (memo get-all-users))
 
+(defn get-user-by-id [redmine-url api-token user-id]
+  (first
+    (filter
+      #(= (:id %) user-id)
+      (memoized-get-all-users redmine-url api-token))))
+
 (defn resolve-formatted-name
   "Find shortest unique name of user by user-id"
   [redmine-url api-token user-id]

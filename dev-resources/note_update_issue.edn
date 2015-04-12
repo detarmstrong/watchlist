@@ -1,0 +1,36 @@
+{
+   :status {:id 18, :name "QA Passed"},
+   :subject
+     "Sites should be able to manage their contact information",
+   :created_on "2014-08-20T01:52:49Z",
+   :author {:id 5, :name "Danny Armstrong"},
+   :assigned_to {:id 5, :name "Danny Armstrong"},
+   :watchers [],
+   :updated_on "2014-08-21T21:48:35Z",
+   :start_date "2014-08-19",
+   :journals
+     [{:id 36809,
+       :user {:id 5, :name "Danny Armstrong"},
+       :notes
+       "Spec addition for Phase 2",
+       :created_on "2014-08-21T17:51:38Z",
+       :details []}
+      {:id 36815,
+       :user {:id 63, :name "Kyle Whalen"},
+       :notes "Login card updated successfully. ",
+       :created_on "2014-08-21T21:48:35Z",
+       :details
+       []}],
+   :tracker {:id 4, :name "Task"},
+   :relations
+     [{:id 806,
+     :issue_id 8329,
+     :issue_to_id 8475,
+     :relation_type "relates",
+     :delay nil}],
+   :id 8475,
+   :description
+     "Site and company contact information is presented",
+   :priority {:id 5, :name "Normal"},
+   :spent_hours 0.0,
+   :project {:id 1, :name "Mike's Early Inflation Gesticulation"}}

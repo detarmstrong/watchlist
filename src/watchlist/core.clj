@@ -1,6 +1,7 @@
 (ns watchlist.core
   (:gen-class) ; required for uberjar
   (:require [watchlist.web-api :as api]
+            [watchlist.window :as window]
             [clojure.java.io :as io]
             [clojure.core :refer :all]
             [clojure.string :refer [join split-lines trim]]
@@ -210,7 +211,7 @@
                                          [:#url])
                                          :text)
                         :filter-options (filterv
-                                          #(identity %)
+                                          identity
                                           [
                                           (if (selection (select
                                                            (to-frame p)
@@ -432,6 +433,7 @@
   (let [issue-id (-> issue :id)
         update-rank (count (-> issue :journals))
         last-journal-entry (-> issue :journals (last))
+        last-journal-entry-created-at (:created_on last-journal-entry)
         is-note-update? (and (contains? last-journal-entry :notes) 
                              (not (= "" (-> last-journal-entry :notes))))
         is-status-update? (some
@@ -448,7 +450,7 @@
        :assignee-id (-> issue :assigned_to :id)
        :ticket-author-id (-> issue :author :id)
        :watchers (-> issue :watchers)
-       :update-rank (count (-> issue :journals))
+       :update-rank update-rank
        :update-uri (str (:url (get-preferences))
                      "/issues/"
                      issue-id
@@ -456,6 +458,7 @@
                      update-rank)
        :update-uri-label (str "#" update-rank)
        :updated-at (-> issue :updated_on)
+       :last-journal-entry-created-at last-journal-entry-created-at
        :relations (-> issue :relations)
        :update-author (ws-do
                         (get-preferences)
@@ -464,6 +467,14 @@
                             (get-in ws [:url])
                             (get-in ws [:api-token])
                             (-> last-journal-entry :user :id))))
+       :update-author-email (:mail
+                               (ws-do
+                                  (get-preferences)
+                                  (fn [ws]
+                                    (api/get-user-by-id
+                                      (get-in ws [:url])
+                                      (get-in ws [:api-token])
+                                      (-> last-journal-entry :user :id)))))
        :project (-> issue :project)
        :update-text (-> last-journal-entry :notes)
        :status-update (map
@@ -496,28 +507,40 @@
        (format-time-ago
          updated-at)))
 
+(defn rounded-edges-painter [c g]
+  (let [w (.getWidth c)
+        h (.getHeight c)]
+    (doto g
+      (seesaw.graphics/draw
+       (seesaw.graphics/rounded-rect -5 -5 (+ w 10) (+ h 10) 20)
+       (seesaw.graphics/style 
+         :stroke 10
+         :foreground (seesaw.color/color 255 255 255 255)
+         :background (seesaw.color/color 0 0 0 0))))))
+
 (defn build-update-row [[record tags]]
   (mig-panel
     :border [(empty-border :thickness 0)]
     :background (color "white")
-    :constraints ["ins 10", "[][grow][]", "[top]"]
+    :constraints ["ins 0", "10[][]0[grow]10", "10[top]0[]8"]
     :items [
-      [(label :text (str "#"
-                         (:id record)
-                         " "
-                         (:subject record))
-              :font "ARIAL-BOLD-14")
-       "span 2, growx, w 240:400:700"]
-      ; Hack to get the text to set. :text on hyperlink did not work
-      [(config! (hyperlink
-                  :uri (:update-uri record)
-                  :tip (str "Open update "
-                            (:update-uri-label record)
-                            " in browser"))
-                :text (:update-uri-label record))
-       "wrap"]
+      [(label
+         :icon (str 
+                 "https://secure.gravatar.com/avatar/"
+                 (->
+                   (if
+                     (not (clojure.string/blank?
+                            (:update-author-email record)))
+                     (:update-author-email record)
+                     (:update-author record))
+                   (.toLowerCase)
+                   (trim)
+                   (string.string/md5hex))
+                 "?rating=PG&size=40&d=retro")
+         :paint rounded-edges-painter)
+       "span 1 2, w 40:40:40"]
       [(vertical-panel
-         :border (empty-border :top 4)
+         :border (empty-border :top 0)
          :id :updates-panel
          :background (color "white")
          :items [(label
@@ -532,8 +555,10 @@
                              (:update-author record)
                              " "
                              tags))
-                 (let [parsed-updated-at (time-format/parse (:updated-at record))
-                       initial-delay (- 60 (time-core/second parsed-updated-at))
+                 (let [parsed-updated-at (time-format/parse
+                                           (:updated-at record))
+                       initial-delay (- 60 (time-core/second
+                                             parsed-updated-at))
                        l (label
                            :text (format-time-ago parsed-updated-at)
                            :tip (str "Updated at "
@@ -550,53 +575,76 @@
                                                (config!
                                                  l
                                                  :text
-                                                 (format-time-ago parsed-updated-at))
+                                                 (format-time-ago
+                                                   parsed-updated-at))
                                                -1)
                                                :delay 60000
                                                :initial-delay initial-delay)]
                    l)])
-       "span 1 2, growx, w 40:54:100"]
-      [(text
-        :text (reduce (fn [state update]
-                        (str state
-                          (condp = (:name update)
-                            "status_id" (str "Status set to: "
-                                             (:new_value update))
-                            "description" "Description updated"
-                            "Property updated")))
-                      ""
-                      (into (:description-update record)
-                            (:status-update record)))
-        :visible? (if (some #(and (not (nil? %)) (not (= "" %)))
-                            (into (:description-update record)
-                                 (:status-update record)))
-                    true
-                    false)
-        :multi-line? true
-        :editable? false
-        :wrap-lines? true
-        :background (color "#ffffff")
-        :margin 5)
-      "span 2 1, gap 5, growx, w 240:400:700, wrap, hidemode 1"]
-      [(text
-        :text (:update-text record)
-        :visible? (if (and (not (nil? (:update-text record)))
-                           (not (= (:update-text record) "")))
-                    true
-                    false)
-        :multi-line? true
-        :editable? false
-        :wrap-lines? true
-        :background (color "#f9f9f9")
-        :margin 5)
-      "span 2 2, gap 5, growx, w 240:400:700, hidemode 1"]
+       "span 1 2, w 40:54:100"]
+      [(label
+         :text (str "#"
+                 (:id record)
+                 " "
+                 (:subject record))
+         :h-text-position :right
+         :font "HELVETICA-BOLD-14")
+       "gapleft 10, gapbottom 0, gaptop 2, growx, w 70:90, wrap"]
+      [(vertical-panel
+         :border (empty-border :top 4)
+         :id :updates-panel
+         :background (color "white")
+         :items [(text
+                   :text (reduce (fn [state update]
+                                   (str state
+                                     (condp = (:name update)
+                                       "status_id" (str "Status set to: "
+                                                        (:new_value update))
+                                       "description" "Description updated"
+                                       "Property updated")))
+                                 ""
+                                 (into (:description-update record)
+                                       (:status-update record)))
+                    :visible? (if (some #(and (not (nil? %)) (not (= "" %)))
+                                        (into (:description-update record)
+                                              (:status-update record)))
+                                true
+                                false)
+                    :multi-line? true
+                    :editable? false
+                    :wrap-lines? true
+                    :background (color "#f9f9f9")
+                    :margin 4)
+                  [:fill-v 2]
+                  (text
+                    :text (:update-text record)
+                    :visible? (if (and (not (nil? (:update-text record)))
+                                       (not (= (:update-text record) "")))
+                                true
+                                false)
+                    :multi-line? true
+                    :editable? false
+                    :wrap-lines? true
+                    :background (color "#f9f9f9")
+                    :margin 4)])
+          "gapleft 10, gaptop 0, growx, w 100:200:700, hidemode 1"]
       ]))
 
 (defn get-issue-updates
   "Iterate issue updates and convert to intermediate representation"
   [from-ts]
   (filterv
-    #(not (nil? %))
+    #(and
+       (not (nil? %))
+       ; In redmine, updates to child tasks will touch the 
+       ; updated_at of the parent task, possibly causing a false
+       ; positive.
+       ; Filter out updates where the last journal entry created is less than
+       ; the start date range (from-ts)
+       (time-core/after?
+         (time-local/to-local-date-time
+           (:last-journal-entry-created-at %))
+         from-ts))
     (mapv
       #(convert-update
          (ws-do
@@ -637,7 +685,8 @@
     :on-close :exit
     :content (frame-content)
     :size [500 :by 700]
-    :minimum-size [400 :by 500]))
+    :minimum-size [400 :by 500]
+    :icon "logo.png"))
 
 (defn tag-updates
   "For each update in update-list, run preds and collect results."
@@ -647,8 +696,9 @@
       (fn [update]
         ; The or here is required because some-fn may return nil if 4
         ; or more preds are given to it and they all fail evaluation
-        [update (or (some-preds update)
-                    false)])
+        [update
+         (or (some-preds update)
+              false)])
       update-list)))
 
 (defn is-tagged-item?
@@ -728,6 +778,7 @@
            (get-in u [:user :lastname])))))
 
 (defn start-app []
+  (window/set-icon! "logo.png")
   (native!)
   (set-preferences (load-preferences))
   (add-watch
@@ -754,7 +805,7 @@
                              watchlist-frame
                              [:#updates-panel])
                            :to :top))
-                       (alert "No connectivity.\nClick the gear to set up Watchlist")))))
+                       (alert "No connectivity.\nClick the gear to set up WatchList")))))
 
 (defn -main
   [& args]
