@@ -40,9 +40,9 @@
     full-path))
 
 (def good-defaults
-  {:filter-options [:im-a-watcher
-                    :im-the-assignee
-                    :im-the-author]})
+  {:filter-options [[:is-a-watcher? -1]
+                    [:is-assignee? -1]
+                    [:is-author? -1]]})
 
 (defn load-preferences
   "return preferences from disk, or return default set"
@@ -114,6 +114,49 @@
   (some
     #(= needle (first %))
     prefs))
+
+(defn on-options-dialog-success [p]
+  {:api-token (config
+                      (select
+                        (to-frame p)
+                        [:#api-token])
+                      :text)
+   :url (config
+                  (select
+                    (to-frame p)
+                    [:#url])
+                    :text)
+   :filter-options (filterv
+                     identity
+                     [
+                     (if (selection (select
+                                      (to-frame p)
+                                      [:#is-a-watcher?]))
+                       [:is-a-watcher? (:id @current-user)])
+                     (if (selection (select
+                                      (to-frame p)
+                                      [:#is-assignee?]))
+                       [:is-assignee? (:id @current-user)])
+                     (if (selection (select
+                                      (to-frame p)
+                                      [:#is-author?]))
+                       [:is-author? (:id @current-user)])
+                     (if (selection (select
+                                      (to-frame p)
+                                      [:#is-related-ticket?]))
+                       [:is-related-ticket? (:id @current-user)])
+                     (if (selection (select
+                                      (to-frame p)
+                                      [:#is-a-update-participant?]))
+                       [:is-a-update-participant? (:id @current-user)])
+                     (if (selection (select
+                                      (to-frame p)
+                                      [:#is-project-substring?]))
+                       [:is-project-substring? (config
+                                                 (select
+                                                   (to-frame p)
+                                                   [:#project-substring-list])
+                                                 :text)])])})
 
 (defn open-options-dialog [e options]
   (-> (dialog
@@ -190,7 +233,7 @@
                              :id :project-substring-list
                              :text (-> (filter
                                          #(= (first %) :is-project-substring?)
-                                         (:filter-options options))
+                                         (-> options :filter-options))
                                      first
                                      second))
                       "gapleft 24, wrap"]
@@ -199,48 +242,7 @@
                      ])
          :parent (to-root e)
          :option-type :ok-cancel
-         :success-fn (fn [p]
-                       {:api-token (config
-                                           (select
-                                             (to-frame p)
-                                             [:#api-token])
-                                           :text)
-                        :url (config
-                                       (select
-                                         (to-frame p)
-                                         [:#url])
-                                         :text)
-                        :filter-options (filterv
-                                          identity
-                                          [
-                                          (if (selection (select
-                                                           (to-frame p)
-                                                           [:#is-a-watcher?]))
-                                            [:is-a-watcher? (:id @current-user)])
-                                          (if (selection (select
-                                                           (to-frame p)
-                                                           [:#is-assignee?]))
-                                            [:is-assignee? (:id @current-user)])
-                                          (if (selection (select
-                                                           (to-frame p)
-                                                           [:#is-author?]))
-                                            [:is-author? (:id @current-user)])
-                                          (if (selection (select
-                                                           (to-frame p)
-                                                           [:#is-related-ticket?]))
-                                            [:is-related-ticket? (:id @current-user)])
-                                          (if (selection (select
-                                                           (to-frame p)
-                                                           [:#is-a-update-participant?]))
-                                            [:is-a-update-participant? (:id @current-user)])
-                                          (if (selection (select
-                                                           (to-frame p)
-                                                           [:#is-project-substring?]))
-                                            [:is-project-substring? (config
-                                                                      (select
-                                                                        (to-frame p)
-                                                                        [:#project-substring-list])
-                                                                      :text)])])})
+         :success-fn on-options-dialog-success
          :cancel-fn (fn [p] nil))
     pack! show!))
 
@@ -279,13 +281,13 @@
                                                              (Thread/currentThread))
                                                            "gear.png")))
                         :handler (fn [e]
-                                   (if-let [options (open-options-dialog
-                                                      e
-                                                      @preferences)]
-                                     (let [prefs-changed? (not (= @preferences options))]
+                                   (if-let [new-prefs (open-options-dialog
+                                                               e
+                                                               @preferences)]
+                                     (let [prefs-changed? (not (= @preferences new-prefs))]
                                        ; write out preferences to file and
                                        ; global ref
-                                       (set-preferences options)
+                                       (set-preferences new-prefs)
                                        (if prefs-changed?
                                          (set-last-update-ts default-days-ago))
                                        ; recheck connectivity and do query if connected
