@@ -13,6 +13,7 @@
                  [clj-time "0.8.0"]
                  [com.bulenkov/iconloader "1.0"]]
   :profiles {:dev {:dependencies [[midje "1.6.3"]]}}
-  :aot [watchlist.core]
+  :aot [clojure.main watchlist.core]
   :main watchlist.core
+  :javac-options ["-target" "1.6" "-source" "1.6" "-Xlint:-options"]
   :jvm-opts ["-Xmx128m"])
