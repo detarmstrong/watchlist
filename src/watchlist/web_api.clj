@@ -171,7 +171,9 @@
                         :conn-timeout timeout-ms
                         :throw-exceptions false})
                      (catch org.apache.http.conn.ConnectTimeoutException e false)
-                     (catch java.net.MalformedURLException e false))]
+                     (catch java.net.MalformedURLException e false)
+                     (catch java.io.EOFException e false)
+                     (catch java.net.UnknownHostException e false))]
     (> (:status attempt) 0)
     false))
 
