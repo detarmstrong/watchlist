@@ -62,6 +62,9 @@
     (pr-str prefs)))
 (defn get-preferences[]
   @preferences)
+(defn set-preference [key value]
+  (set-preferences
+    (assoc-in @preferences [key] value))) 
 
 (def current-user (atom {:id nil :name nil}))
 (defn set-current-user [id name]
@@ -117,15 +120,15 @@
 
 (defn on-options-dialog-success [p]
   {:api-token (config
-                      (select
-                        (to-frame p)
-                        [:#api-token])
-                      :text)
+                (select
+                  (to-frame p)
+                  [:#api-token])
+                :text)
    :url (config
-                  (select
-                    (to-frame p)
-                    [:#url])
-                    :text)
+          (select
+            (to-frame p)
+            [:#url])
+            :text)
    :filter-options (filterv
                      identity
                      [
@@ -159,91 +162,174 @@
                                                  :text)])])})
 
 (defn open-options-dialog [e options]
-  (-> (dialog
-        :id :settings-dialog
-        :content (mig-panel
-                   :items [
-                     [(label
-                        :font (font :from (default-font "Label.font")
-                                    :style :bold
-                                    :size 24)
-                        :text "Settings")
-                      "wrap"]
-                     [(label
-                        :font (font :from (default-font "Label.font")
-                                    :style :bold)
-                        :text "Redmine URL")
-                      "gaptop 5, wrap"]
-                     [(text :columns 26
-                            :id :url
-                            :text (-> options :url))
-                      "wrap"]
-                     [(label
-                        :font (font :from (default-font "Label.font")
-                                    :style :bold)
-                        :text "Redmine API Key")
-                      "gaptop 5, wrap"]
-                     [(text :columns 26
-                            :id :api-token
-                            :text (-> options :api-token))
-                      "wrap"]
-                     [(label
-                        :font (font :from (default-font "Label.font")
-                                    :style :bold)
-                        :text "Show me updates for tickets where ...")
-                      "gaptop 5, wrap"]
-                     [(checkbox :text "I'm the assignee"
-                                :id :is-assignee?
-                                :selected? (pref-selected?
-                                             :is-assignee?
-                                             (-> options :filter-options)))
-                      "wrap"]
-                     [(checkbox :text "I'm a watcher"
-                                :id :is-a-watcher?
-                                :selected? (pref-selected?
-                                             :is-a-watcher?
-                                             (-> options :filter-options)))
-                      "wrap"]
-                     [(checkbox :text "I'm the author"
-                                :id :is-author?
-                                :selected? (pref-selected?
-                                             :is-author?
-                                             (-> options :filter-options)))
-                      "wrap"]
-                     [(checkbox :text "The ticket is related to one of my assigned tickets"
-                                :id :is-related-ticket?
-                                :selected? (pref-selected?
-                                             :is-related-ticket?
-                                             (-> options :filter-options))
-                                :tip "For example, the ticket is blocked by or precedes one of my tickets")
-                      "wrap"]
-                     [(checkbox :text "I've participated in the ticket updates"
-                                :id :is-a-update-participant?
-                                :selected? (pref-selected?
-                                             :is-a-update-participant?
-                                             (-> options :filter-options)))
-                      "wrap"]
-                     [(checkbox :text "The project name contains (comma separated):"
-                                  :id :is-project-substring?
+  (-> (let [redmine-url-status-label (label
+                                       :font (font :from (default-font "Label.font")
+                                                   :style :italic)
+                                       :text "")
+            redmine-api-token-status-label (label
+                                             :font (font :from (default-font "Label.font")
+                                                          :style :italic)
+                                             :text "")
+            redmine-url-panel (horizontal-panel
+                                :items [(label
+                                          :font (font :from (default-font "Label.font")
+                                                      :style :bold)
+                                          :text "Redmine URL")
+                                        [:fill-h 10]
+                                        redmine-url-status-label])
+            redmine-api-token-panel (horizontal-panel
+                                         :items [(label
+                                                   :font (font :from (default-font "Label.font")
+                                                               :style :bold)
+                                                   :text "Redmine API Key")
+                                                 [:fill-h 10]
+                                                 redmine-api-token-status-label])
+            redmine-url-input (text
+                                :columns 26
+                                :id :url
+                                :text (-> options :url))
+            redmine-api-token-input (text
+                                      :columns 26
+                                      :id :api-token
+                                      :text (-> options :api-token))
+            listen-url (listen
+                         redmine-url-input
+                         :focus-lost
+                         (fn [evt]
+                           (do
+                             (config!
+                               redmine-url-status-label
+                               :text
+                               "Checking URL...")
+                             (future
+                               (let [any-response? (api/http-any-response?
+                                                     (config redmine-url-input :text)
+                                                     10000)]
+                               (invoke-later
+                                 (if any-response?
+                                   (config!
+                                     redmine-url-status-label
+                                     :text
+                                     "URL OK!")
+                                   (config!
+                                     redmine-url-status-label
+                                     :text
+                                     "Connection failed. Please check URL."))))))))
+            listen-api-token (listen
+                               redmine-api-token-input
+                               :focus-lost
+                               (fn [evt]
+                                 (do
+                                   (config!
+                                     redmine-api-token-status-label
+                                     :text
+                                     "Checking key...")
+                                   (future
+                                     ; the key should only be checked if there is http response
+                                     (let [any-response? (api/http-any-response?
+                                                           (config redmine-url-input :text)
+                                                           10000)
+                                           valid-key? (if any-response?
+                                                        (api/valid-token?
+                                                          (config redmine-url-input :text)
+                                                          (config redmine-api-token-input :text))
+                                                        false)]
+                                     (invoke-later
+                                       (if (and
+                                             any-response?
+                                             valid-key?)
+                                         (do
+                                           (config!
+                                             redmine-api-token-status-label
+                                             :text
+                                             "API Key OK!")
+                                           (set-preference :url (config redmine-url-input :text))
+                                           (set-preference :api-token (config redmine-api-token-input :text))
+                                           (set-is-connectivity? true))
+                                         (if (not any-response?)
+                                           (config!
+                                             redmine-api-token-status-label
+                                             :text
+                                             "Connection failed. Please check URL.")
+                                           (config!
+                                             redmine-api-token-status-label
+                                             :text
+                                             "API Key rejected")))))))))]
+        (dialog
+          :id :settings-dialog
+          :content (mig-panel
+                     :items [
+                       [(label
+                          :font (font :from (default-font "Label.font")
+                                      :style :bold
+                                      :size 24)
+                          :text "Settings")
+                        "wrap"]
+                       [redmine-url-panel
+                        "gaptop 5, wrap"]
+                       [redmine-url-input
+                        "wrap"]
+                       [redmine-api-token-panel
+                        "gaptop 5, wrap"]
+                       [redmine-api-token-input
+                        "wrap"]
+                       [(label
+                          :font (font :from (default-font "Label.font")
+                                      :style :bold)
+                          :text "Show me updates for tickets where ...")
+                        "gaptop 5, wrap"]
+                       [(checkbox :text "I'm the assignee"
+                                  :id :is-assignee?
                                   :selected? (pref-selected?
-                                               :is-project-substring?
+                                               :is-assignee?
                                                (-> options :filter-options)))
-                      "wrap"]
-                     [(text :columns 22
-                             :id :project-substring-list
-                             :text (-> (filter
-                                         #(= (first %) :is-project-substring?)
-                                         (-> options :filter-options))
-                                     first
-                                     second))
-                      "gapleft 24, wrap"]
-                     ["<html><br/><i>WatchList will get the last <b>3</b> days of updates</i></html>"
-                      "wrap"]
-                     ])
-         :parent (to-root e)
-         :option-type :ok-cancel
-         :success-fn on-options-dialog-success
-         :cancel-fn (fn [p] nil))
+                        "wrap"]
+                       [(checkbox :text "I'm a watcher"
+                                  :id :is-a-watcher?
+                                  :selected? (pref-selected?
+                                               :is-a-watcher?
+                                               (-> options :filter-options)))
+                        "wrap"]
+                       [(checkbox :text "I'm the author"
+                                  :id :is-author?
+                                  :selected? (pref-selected?
+                                               :is-author?
+                                               (-> options :filter-options)))
+                        "wrap"]
+                       [(checkbox :text "The ticket is related to one of my assigned tickets"
+                                  :id :is-related-ticket?
+                                  :selected? (pref-selected?
+                                               :is-related-ticket?
+                                               (-> options :filter-options))
+                                  :tip "For example, the ticket is blocked by or precedes one of my tickets")
+                        "wrap"]
+                       [(checkbox :text "I've participated in the ticket updates"
+                                  :id :is-a-update-participant?
+                                  :selected? (pref-selected?
+                                               :is-a-update-participant?
+                                               (-> options :filter-options)))
+                        "wrap"]
+                       [(checkbox :text "The project name contains (comma separated):"
+                                    :id :is-project-substring?
+                                    :selected? (pref-selected?
+                                                 :is-project-substring?
+                                                 (-> options :filter-options)))
+                        "wrap"]
+                       [(text :columns 22
+                               :id :project-substring-list
+                               :text (-> (filter
+                                           #(= (first %) :is-project-substring?)
+                                           (-> options :filter-options))
+                                       first
+                                       second))
+                        "gapleft 24, wrap"]
+                       ["<html><br/><i>WatchList will get the last <b>3</b> days of updates</i></html>"
+                        "wrap"]
+                       ])
+           :parent (to-root e)
+           :option-type :ok-cancel
+           :success-fn on-options-dialog-success
+           :cancel-fn (fn [p] nil)))
     pack! show!))
 
 (defn frame-content []
@@ -768,11 +854,9 @@
         :repeats? false)
       (set-fetching-updates false))))
 
-(defn query-and-set-current-user []
-  (let [u (ws-do @preferences
-                 (fn [ws]
-                   (api/current-user (get-in ws [:url])
-                                     (get-in ws [:api-token]))))]
+(defn query-and-set-current-user [url api-token]
+  (let [u (api/current-user url
+                            api-token)]
     (set-current-user
       (get-in u [:user :id])
       (str (get-in u [:user :firstname])
@@ -788,7 +872,8 @@
     :connectivity-watch
     (fn [k r old-state new-state]
       (when new-state
-        (query-and-set-current-user))))
+        (query-and-set-current-user (:url @preferences)
+                                    (:api-token @preferences)))))
   (set-is-connectivity?
     (check-connectivity))
   (-> watchlist-frame pack! show!)
