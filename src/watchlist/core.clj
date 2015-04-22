@@ -2,12 +2,14 @@
   (:gen-class) ; required for uberjar
   (:require [watchlist.web-api :as api]
             [watchlist.window :as window]
+            [watchlist.desktop :as desktop]
             [clojure.java.io :as io]
             [clojure.core :refer :all]
             [clojure.string :refer [join split-lines trim]]
             [clojure.edn :as edn]
             [seesaw.core :refer :all]
             [seesaw.color :refer :all]
+            [seesaw.cursor :as cursor]
             [seesaw.border :refer [empty-border]]
             [seesaw.font :refer [font default-font]]
             [seesaw.keymap :refer :all]
@@ -19,8 +21,7 @@
             [clj-time.core :as time-core]
             [clj-time.format :as time-format]
             [clj-time.local :as time-local])
-  (:import (java.awt Desktop)
-           (com.bulenkov.iconloader IconLoader)))
+  (:import (com.bulenkov.iconloader IconLoader)))
 
 (declare convert-update)
 (declare set-update-items-list-ui)
@@ -384,6 +385,15 @@
                                          (set-update-items-list-ui
                                            @last-update-ts)))))))))
 
+(def watchlist-frame
+  (frame
+    :title "WatchList"
+    :on-close :exit
+    :content (frame-content)
+    :size [500 :by 700]
+    :minimum-size [400 :by 500]
+    :icon "logo.png"))
+
 (defn contains-every? [m keyseqs]
   (let [not-found (Object.)]
     (not-any? #{not-found}
@@ -670,13 +680,22 @@
                                                :initial-delay initial-delay)]
                    l)])
        "span 1 2, w 40:54:100"]
-      [(label
-         :text (str "#"
-                 (:id record)
-                 " "
-                 (:subject record))
-         :h-text-position :right
-         :font "HELVETICA-BOLD-14")
+      [(let [id-and-subj (label
+                           :text (str
+                                   (:id record)
+                                   " "
+                                   (:subject record))
+                           :cursor (cursor/cursor :hand)
+                           :h-text-position :right
+                           :font "HELVETICA-BOLD-14")]
+         (do
+           (listen id-and-subj :mouse-clicked (fn [src-evt]
+                                                (desktop/open-url-on-desktop
+                                                   (str
+                                                     (:url @preferences)
+                                                     "/issues/"
+                                                     (:id record)))))
+           id-and-subj))
        "gapleft 10, gapbottom 0, gaptop 2, growx, w 70:90, wrap"]
       [(vertical-panel
          :border (empty-border :top 4)
@@ -766,15 +785,6 @@
                                 new-update-ids))
                             old-list)]
     (into new-list filtered-old-list)))
-
-(def watchlist-frame
-  (frame
-    :title "WatchList"
-    :on-close :exit
-    :content (frame-content)
-    :size [500 :by 700]
-    :minimum-size [400 :by 500]
-    :icon "logo.png"))
 
 (defn tag-updates
   "For each update in update-list, run preds and collect results."
