@@ -610,7 +610,7 @@
         h (.getHeight c)]
     (doto g
       (seesaw.graphics/draw
-       (seesaw.graphics/rounded-rect -5 -5 (+ w 10) (+ h 10) 20)
+       (seesaw.graphics/circle (/ w 2) (/ h 2) 24)
        (seesaw.graphics/style 
          :stroke 10
          :foreground (seesaw.color/color 255 255 255 255)
