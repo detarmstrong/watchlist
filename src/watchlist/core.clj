@@ -14,7 +14,7 @@
             [seesaw.font :refer [font default-font]]
             [seesaw.keymap :refer :all]
             [seesaw.mig :refer :all]
-            [seesaw.swingx :refer [hyperlink busy-label]]
+            [seesaw.swingx :refer [busy-label]]
             [seesaw.bind :as bind]
             [clj-http.util :refer [url-encode]]
             [overtone.at-at :as at-at]
@@ -206,16 +206,16 @@
                                (let [any-response? (api/http-any-response?
                                                      (config redmine-url-input :text)
                                                      10000)]
-                               (invoke-later
-                                 (if any-response?
-                                   (config!
-                                     redmine-url-status-label
-                                     :text
-                                     "URL OK!")
-                                   (config!
-                                     redmine-url-status-label
-                                     :text
-                                     "Connection failed. Please check URL."))))))))
+                                 (invoke-later
+                                   (if any-response?
+                                     (config!
+                                       redmine-url-status-label
+                                       :text
+                                       "URL OK! ")
+                                     (config!
+                                       redmine-url-status-label
+                                       :text
+                                       "Connection failed. Please check URL. "))))))))
             listen-api-token (listen
                                redmine-api-token-input
                                :focus-lost
@@ -243,7 +243,7 @@
                                            (config!
                                              redmine-api-token-status-label
                                              :text
-                                             "API Key OK!")
+                                             "API Key OK! ")
                                            (set-preference :url (config redmine-url-input :text))
                                            (set-preference :api-token (config redmine-api-token-input :text))
                                            (set-is-connectivity? true))
@@ -251,11 +251,11 @@
                                            (config!
                                              redmine-api-token-status-label
                                              :text
-                                             "Connection failed. Please check URL.")
+                                             "Connection failed. Please check URL. ")
                                            (config!
                                              redmine-api-token-status-label
                                              :text
-                                             "API Key rejected")))))))))]
+                                             "API Key rejected ")))))))))]
         (dialog
           :id :settings-dialog
           :content (mig-panel
