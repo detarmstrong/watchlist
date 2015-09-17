@@ -32,6 +32,7 @@
 (declare is-author?)
 (declare is-related-ticket?)
 (declare is-a-update-participant?)
+(declare watchlist-frame)
 
 (def preferences-file-path
   (let [dot-file ".watchlist-preferences"
@@ -385,14 +386,6 @@
                                          (set-update-items-list-ui
                                            @last-update-ts)))))))))
 
-(def watchlist-frame
-  (frame
-    :title "WatchList"
-    :on-close :exit
-    :content (frame-content)
-    :size [500 :by 700]
-    :minimum-size [400 :by 500]
-    :icon "logo.png"))
 
 (defn contains-every? [m keyseqs]
   (let [not-found (Object.)]
@@ -906,5 +899,13 @@
 
 (defn -main
   [& args]
-  ; should I use invoke-later here?
-  (start-app))
+  (def watchlist-frame
+    (frame
+      :title "WatchList"
+      :on-close :exit
+      :content (frame-content)
+      :size [500 :by 700]
+      :minimum-size [400 :by 500]
+      :icon "logo.png"))
+  (invoke-later
+    (start-app)))
