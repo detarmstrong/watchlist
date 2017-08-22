@@ -461,11 +461,10 @@
 (defn is-a-update-participant?
   "Determine if user authored any updates to ticket"
   [user-id update-record]
-  (first
-    (filter
-      (fn [item]
-        (= (-> item :user :id) user-id))
-      (:journals update-record))))
+  (not (empty? (filter
+                 (fn [item]
+                   (= (-> item :user :id) user-id))
+                 (:journals update-record)))))
 
 (defn is-mentioned-in-ticket-or-update?
   "Determine if user was mentioned by any other user in any updates to ticket.
@@ -550,6 +549,7 @@
        :update-uri-label (str "#" update-rank)
        :updated-at (-> issue :updated_on)
        :last-journal-entry-created-at last-journal-entry-created-at
+       :journals (-> issue :journals)
        :relations (-> issue :relations)
        :update-author (ws-do
                         (get-preferences)
