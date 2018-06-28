@@ -43,6 +43,7 @@
       (str redmine-url "/users.json")
       {:as :json
        :basic-auth [api-token ""]
+       :query-params {:limit 500}
        :socket-timeout 12000
        :debug false})
     :body
@@ -117,7 +118,7 @@
                                                  ">="
                                                  iso-ts)
                                    :sort "updated_on:desc"
-                                   :limit 120}
+                                   :limit 300}
                     :debug true
                     :debug-body false})]
     (get-in response [:body :issues])))
