@@ -101,3 +101,114 @@ drop-while (fn [in] (not in)) '(false false true))
 (use 'midje.repl)
 (autotest)
 (start-app)
+(def watchlist-frame
+    (frame
+      :title "WatchList"
+      :on-close :exit
+      :content (frame-content)
+      :size [500 :by 700]
+      :minimum-size [400 :by 500]
+      :icon "logo.png")
+]
+(def watchlist-frame
+    (frame
+      :title "WatchList"
+      :on-close :exit
+      :content (frame-content)
+      :size [500 :by 700]
+      :minimum-size [400 :by 500]
+      :icon "logo.png"))
+(start-app)
+(defn set-update-items-list-ui [from-date]
+  (set-last-update-ts (time-core/now))
+  (set-fetching-updates true)
+  (future
+    (let [issue-updates (get-issue-updates from-date)
+          merged-items (merge-updates
+                         ; Dispose of previous tagging - this is useful
+                         ; if the user unchecks an update type
+                         (mapv
+                           first
+                           @master-updates)
+                         issue-updates)
+          tagged-items (tag-updates
+                         merged-items
+                         (build-preds-from-filter-options
+                           (-> @preferences :filter-options)))
+          filtered-items (filterv
+                           is-tagged-item?
+                           tagged-items)
+          built-items (mapv
+                        build-update-row
+                        filtered-items)]
+      (set-master-updates filtered-items)
+      (invoke-later
+        (config!
+          (select
+            watchlist-frame
+            [:#updates-panel])
+          :items built-items))
+      ; terrible hack to get the damn ui to correct itself
+      ; after reloading the items (large whitespace between rows)
+      (seesaw.timer/timer
+        (fn [e]
+          (-> (select watchlist-frame [:#updates-panel]) (.revalidate)))
+        :initial-delay 10
+        :repeats? false)
+(def watchlist-frame
+    (frame
+      :title "WatchList"
+      :on-close :exit
+      :content (frame-content)
+      :size [500 :by 700]
+      :minimum-size [400 :by 500]
+      :icon "logo.png"))
+(start-app)
+(def watchlist-frame
+    (frame
+      :title "WatchList"
+      :on-close :exit
+      :content (frame-content)
+      :size [500 :by 700]
+      :minimum-size [400 :by 500]
+      :icon "logo.png"))
+(start-app)
+(api/issue
+               (get-in ws [:url])
+               (get-in ws [:api-token])
+               (get-in % [:id]))))
+(api/issue
+(get-in ws [:url])
+(get-in ws [:api-token])
+14374)
+(ws-do
+@preferences
+(fn [ws]
+(api/issue
+(get-in ws [:url])
+(get-in ws [:api-token])
+14374)
+)
+(ws-do
+                                  (get-preferences)
+                                  (fn [ws]
+                                    (api/get-user-by-id
+                                      (get-in ws [:url])
+                                      (get-in ws [:api-token])
+                                      149)))
+(ws-do
+                                  (get-preferences)
+                                  (fn [ws]
+                                    (api/get-user-by-id
+                                      (get-in ws [:url])
+                                      (get-in ws [:api-token])
+                                      61)))
+(def watchlist-frame
+    (frame
+      :title "WatchList"
+      :on-close :exit
+      :content (frame-content)
+      :size [500 :by 700]
+      :minimum-size [400 :by 500]
+      :icon "logo.png"))
+(start-app)
